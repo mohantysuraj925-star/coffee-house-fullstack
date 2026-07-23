@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { FiShoppingCart, FiUser, FiLogOut, FiLayout } from "react-icons/fi";
+import { FiShoppingCart, FiUser, FiLogOut, FiLayout, FiMenu, FiX } from "react-icons/fi";
 import logo from "../../assets/logo.png";
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const [isOpen, setIsOpen] = useState(false);
 
   const token = localStorage.getItem("token");
   const isSuperuser = localStorage.getItem("is_superuser") === "true";
@@ -12,7 +13,6 @@ const Navbar = () => {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("is_superuser");
-
     navigate("/login");
   };
 
@@ -23,24 +23,22 @@ const Navbar = () => {
   ];
 
   return (
-    <nav className="bg-[#0F172A] border-b-4 border-[#38BDF8]">
-      <div className="max-w-7xl mx-auto px-6 md:px-10 h-20 flex items-center justify-between">
+    <nav className="bg-[#0F172A] border-b-4 border-[#38BDF8] relative z-50">
+      <div className="max-w-7xl mx-auto px-4 md:px-10 h-20 flex items-center justify-between">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-3">
           <img
             src={logo}
             alt="Coffee House"
-            className="w-16 h-16 object-contain"
+            className="w-12 h-12 md:w-16 md:h-16 object-contain"
           />
-
-          <div className="hidden sm:block">
-            <h1 className="text-white text-xl font-bold">Coffee House</h1>
-
-            <p className="text-[#38BDF8] text-xs">Better Taste, Better Life</p>
+          <div>
+            <h1 className="text-white text-lg md:text-xl font-bold">Coffee House</h1>
+            <p className="text-[#38BDF8] text-[10px] md:text-xs">Better Taste, Better Life</p>
           </div>
         </Link>
 
-        {/* Navigation Links */}
+        {/* Desktop Navigation Links */}
         <div className="hidden md:flex items-center gap-8">
           {navLinks.map((item) => (
             <NavLink
@@ -68,9 +66,8 @@ const Navbar = () => {
           )}
         </div>
 
-        {/* Right Side */}
-        <div className="flex items-center gap-3">
-          {/* Admin Dashboard */}
+        {/* Right Side Desktop */}
+        <div className="hidden md:flex items-center gap-3">
           {token && isSuperuser && (
             <Link
               to="/admin/dashboard/"
@@ -81,7 +78,6 @@ const Navbar = () => {
             </Link>
           )}
 
-          {/* Login */}
           {!token && (
             <Link
               to="/login"
@@ -92,7 +88,6 @@ const Navbar = () => {
             </Link>
           )}
 
-          {/* Logout */}
           {token && (
             <button
               onClick={handleLogout}
@@ -103,7 +98,75 @@ const Navbar = () => {
             </button>
           )}
         </div>
+
+        {/* Mobile Hamburger Button */}
+        <div className="flex md:hidden items-center gap-2">
+          {token && (
+            <Link to="/cart" className="text-white p-2 text-xl">
+              <FiShoppingCart />
+            </Link>
+          )}
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="text-white p-2 text-2xl focus:outline-none"
+          >
+            {isOpen ? <FiX /> : <FiMenu />}
+          </button>
+        </div>
       </div>
+
+      {/* Mobile Dropdown Menu */}
+      {isOpen && (
+        <div className="md:hidden bg-[#1E293B] border-b-2 border-[#38BDF8] px-6 py-4 flex flex-col gap-4">
+          {navLinks.map((item) => (
+            <NavLink
+              key={item.name}
+              to={item.path}
+              onClick={() => setIsOpen(false)}
+              className={({ isActive }) =>
+                `font-medium py-1 text-base transition ${
+                  isActive ? "text-[#38BDF8]" : "text-white"
+                }`
+              }
+            >
+              {item.name}
+            </NavLink>
+          ))}
+
+          {token && isSuperuser && (
+            <Link
+              to="/admin/dashboard/"
+              onClick={() => setIsOpen(false)}
+              className="text-white py-1 font-medium flex items-center gap-2"
+            >
+              <FiLayout />
+              Dashboard
+            </Link>
+          )}
+
+          {!token ? (
+            <Link
+              to="/login"
+              onClick={() => setIsOpen(false)}
+              className="bg-[#0284C7] text-white px-4 py-2 rounded-lg text-center font-semibold flex items-center justify-center gap-2"
+            >
+              <FiUser />
+              Login
+            </Link>
+          ) : (
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                handleLogout();
+              }}
+              className="bg-[#2563EB] text-white px-4 py-2 rounded-lg font-semibold flex items-center justify-center gap-2"
+            >
+              <FiLogOut />
+              Logout
+            </button>
+          )}
+        </div>
+      )}
     </nav>
   );
 };

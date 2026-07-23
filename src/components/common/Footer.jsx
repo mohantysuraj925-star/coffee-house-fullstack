@@ -5,8 +5,21 @@ import logo from "../../assets/logo.png";
 const Footer = () => {
   return (
     <footer className="bg-[#0F172A] text-white border-t border-slate-800">
+      {/* Top Banner - Fills Gap Before Footer */}
+      <div className="bg-gradient-to-r from-[#1E293B] via-[#0284C7]/20 to-[#1E293B] border-b border-slate-800 py-8 px-6 text-center">
+        <div className="max-w-4xl mx-auto">
+          <span className="text-3xl">🎁☕✨</span>
+          <h3 className="text-xl md:text-2xl font-bold text-white mt-2">
+            Craving Special Handcrafted Coffee?
+          </h3>
+          <p className="text-[#94A3B8] text-sm mt-1">
+            Visit our outlet or explore our online menu for fresh brews & delicious snacks everyday! 🚀
+          </p>
+        </div>
+      </div>
+
       {/* Main Footer */}
-      <div className="max-w-7xl mx-auto px-6 md:px-10 py-14">
+      <div className="max-w-7xl mx-auto px-6 md:px-10 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
 
           {/* Brand */}
@@ -15,7 +28,7 @@ const Footer = () => {
               <img
                 src={logo}
                 alt="Coffee House"
-                className="w-20 h-20 object-contain"
+                className="w-16 h-16 md:w-20 md:h-20 object-contain"
               />
 
               <div>
