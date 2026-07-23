@@ -1,0 +1,31 @@
+pip install djangorestframework
+ 
+settings.py 
+'rest_framework.authtoken',
+'rest_framework',
+'api'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+}
+ 
+python manage.py migrate
+
+
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+
+@api_view(['GET'])
+def welcome(request):
+    return Response("Welcome to events apis...")
+
+write register serelizer, view, route
+write login view (just add is_superuser) , path 
+
+
+to add permission
+create permissions.py
+
+add permission_clss by importing
