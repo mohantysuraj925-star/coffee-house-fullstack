@@ -1,0 +1,17 @@
+services:
+  # 1. FRONTEND (React)
+  - type: web
+    name: coffee-house-frontend
+    env: static
+    buildCommand: cd client && npm install && npm run build
+    staticPublishPath: client/dist
+    envVars:
+      - key: VITE_BASE_URL
+        value: https://coffee-house-backend.onrender.com
+
+  # 2. BACKEND
+  - type: web
+    name: coffee-house-backend
+    env: python
+    buildCommand: cd server && pip install -r requirements.txt
+    startCommand: cd server && gunicorn core.wsgi:application
