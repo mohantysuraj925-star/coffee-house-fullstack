@@ -41,3 +41,13 @@ class Cart(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.menu.name}"    
     
+class Order(models.Model):
+    order_id = models.CharField(max_length=100, unique=True)
+    customer_name = models.CharField(max_length=100)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    payment_status = models.CharField(max_length=20, default="Completed")
+    payment_method = models.CharField(max_length=50, default="UPI (Demo)")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Order {self.order_id} - {self.customer_name}"
