@@ -15,13 +15,14 @@ const Menu = () => {
       setLoading(true);
       setError("");
 
-      const menuRes = await axios.get(`${import.meta.env.VITE_BASE_URL}/menu/`);
+      const menuRes = await axios.get(`${import.meta.env.VITE_BASE_URL}/menu/`, { timeout: 3000 });
       setMenus(menuRes.data);
 
       if (token) {
         try {
           const cartRes = await axios.get(`${import.meta.env.VITE_BASE_URL}/cart/`, {
             headers: { Authorization: `Token ${token}` },
+            timeout: 3000
           });
 
           const qtyMap = {};
@@ -102,7 +103,6 @@ const Menu = () => {
     if (url.startsWith("http://") || url.startsWith("https://")) return url;
     return `${import.meta.env.VITE_BASE_URL}${url.startsWith("/") ? "" : "/"}${url}`;
   };
-
   return (
     <div className="min-h-screen bg-[#0F172A]">
       <section className="relative overflow-hidden py-16 md:py-20">
