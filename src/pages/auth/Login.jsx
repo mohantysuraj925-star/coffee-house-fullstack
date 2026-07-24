@@ -16,7 +16,6 @@ const Login = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -25,21 +24,21 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     setLoading(true);
     setError("");
 
     try {
       const response = await axios.post(
-        `${import.meta.env.VITE_BASE_URL}/login/`,
-        formData
+        "http://127.0.0.1:8000/api/login/",
+        formData,
+        { headers: { "Content-Type": "application/json" } }
       );
 
       if (response.data.token) {
         localStorage.setItem("token", response.data.token);
         localStorage.setItem(
           "is_superuser",
-          response.data.is_superuser.toString()
+          response.data.is_superuser ? "true" : "false"
         );
 
         if (response.data.is_superuser) {
@@ -50,11 +49,11 @@ const Login = () => {
       } else {
         setError(response.data.message || "Invalid credentials");
       }
-    } catch (error) {
+    } catch (err) {
       setError(
-        error.response?.data?.message ||
-          error.response?.data?.detail ||
-          "Login failed"
+        err.response?.data?.message ||
+          err.response?.data?.detail ||
+          "Login failed. Check server logs."
       );
     } finally {
       setLoading(false);
@@ -62,55 +61,44 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-80px)] bg-[#0F172A] flex items-center justify-center px-4 py-12 relative overflow-hidden">
-      {/* Background Decorations */}
-      <div className="absolute -top-32 -left-32 w-96 h-96 bg-[#0284C7]/10 rounded-full"></div>
+    <div className="min-h-[calc(100vh-80px)] bg-[#0F172A] flex items-center justify-center px-4 py-8 relative overflow-hidden">
+      <div className="absolute top-10 left-10 w-72 h-72 bg-[#0284C7]/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-10 right-10 w-80 h-80 bg-[#2563EB]/20 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="absolute -bottom-40 -right-32 w-[500px] h-[500px] bg-[#2563EB]/10 rounded-full"></div>
-
-      {/* Login Card */}
-      <div className="relative z-10 w-full max-w-md bg-[#1E293B] border border-slate-700 rounded-3xl shadow-xl p-7 md:p-9">
-        {/* Logo */}
-        <div className="flex justify-center mb-4">
-          <div className="w-24 h-24 flex items-center justify-center">
+      <div className="relative z-10 w-full max-w-md bg-[#1E293B]/80 backdrop-blur-xl border border-slate-700/60 rounded-3xl shadow-2xl p-6 sm:p-8">
+        <div className="flex justify-center mb-3">
+          <div className="w-20 h-20 p-2 bg-[#0F172A]/60 rounded-2xl border border-slate-700/50 shadow-inner flex items-center justify-center">
             <img
               src={logo}
               alt="Coffee House"
-              className="w-full h-full object-contain"
+              className="w-full h-full object-contain drop-shadow"
             />
           </div>
         </div>
 
-        {/* Heading */}
-        <div className="text-center mb-8">
-          <p className="text-[#38BDF8] text-xs font-semibold uppercase tracking-widest mb-2">
-            Coffee House
-          </p>
-
-          <h1 className="text-3xl font-bold text-white">
-            Welcome Back
+        <div className="text-center mb-6">
+          <span className="inline-block px-3 py-1 bg-[#38BDF8]/10 text-[#38BDF8] text-[11px] font-bold uppercase tracking-wider rounded-full mb-2 border border-[#38BDF8]/20">
+            Welcome Back ☕
+          </span>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
+            Sign In to <span className="text-[#38BDF8]">Coffee House</span>
           </h1>
-
-          <p className="text-[#94A3B8] text-sm mt-2">
-            Sign in to continue to your account.
+          <p className="text-[#94A3B8] text-xs sm:text-sm mt-1">
+            Enjoy your favorite handcrafted coffee in one click.
           </p>
         </div>
 
-        {/* Error */}
         {error && (
-          <div className="mb-5 px-4 py-3 bg-red-950/60 border border-red-800 text-red-300 text-sm rounded-xl">
+          <div className="mb-4 px-4 py-3 bg-red-950/70 border border-red-800/80 text-red-300 text-xs rounded-xl shadow-sm">
             {error}
           </div>
         )}
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Username */}
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-white mb-2">
+            <label className="block text-xs font-medium text-slate-300 mb-1.5">
               Username
             </label>
-
             <input
               type="text"
               name="username"
@@ -118,16 +106,14 @@ const Login = () => {
               onChange={handleChange}
               placeholder="Enter your username"
               required
-              className="w-full px-4 py-3.5 bg-[#0F172A] border border-slate-700 rounded-xl text-white placeholder:text-[#64748B] outline-none focus:ring-2 focus:ring-[#0284C7]/30 focus:border-[#0284C7] transition"
+              className="w-full px-4 py-3 bg-[#0F172A]/80 border border-slate-700 rounded-xl text-white text-sm placeholder:text-slate-500 outline-none focus:border-[#38BDF8] focus:ring-1 focus:ring-[#38BDF8] transition"
             />
           </div>
 
-          {/* Password */}
           <div>
-            <label className="block text-sm font-semibold text-white mb-2">
+            <label className="block text-xs font-medium text-slate-300 mb-1.5">
               Password
             </label>
-
             <input
               type="password"
               name="password"
@@ -135,45 +121,42 @@ const Login = () => {
               onChange={handleChange}
               placeholder="Enter your password"
               required
-              className="w-full px-4 py-3.5 bg-[#0F172A] border border-slate-700 rounded-xl text-white placeholder:text-[#64748B] outline-none focus:ring-2 focus:ring-[#0284C7]/30 focus:border-[#0284C7] transition"
+              className="w-full px-4 py-3 bg-[#0F172A]/80 border border-slate-700 rounded-xl text-white text-sm placeholder:text-slate-500 outline-none focus:border-[#38BDF8] focus:ring-1 focus:ring-[#38BDF8] transition"
             />
           </div>
 
-          {/* Login Button */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[#0284C7] hover:bg-[#0369A1] disabled:opacity-60 text-white font-semibold py-3.5 rounded-xl transition-all duration-300 cursor-pointer disabled:cursor-not-allowed hover:shadow-lg"
+            className="w-full mt-2 bg-gradient-to-r from-[#0284C7] to-[#2563EB] hover:from-[#0369A1] hover:to-[#1D4ED8] disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition-all duration-300 shadow-md hover:shadow-cyan-500/20 active:scale-[0.99] cursor-pointer"
           >
             {loading ? (
-              <span className="flex items-center justify-center gap-3">
-                <span className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
-                Logging in...
+              <span className="flex items-center justify-center gap-2 text-sm">
+                <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+                Authenticating...
               </span>
             ) : (
-              "Login"
+              "Sign In"
             )}
           </button>
         </form>
 
-        {/* Register */}
-        <div className="text-center mt-7 pt-6 border-t border-slate-800">
-          <p className="text-sm text-[#94A3B8]">
+        <div className="text-center mt-6 pt-5 border-t border-slate-800">
+          <p className="text-xs text-[#94A3B8]">
             Don't have an account?{" "}
             <Link
               to="/register"
-              className="text-[#38BDF8] hover:underline font-semibold"
+              className="text-[#38BDF8] hover:text-[#0284C7] font-semibold transition"
             >
               Create Account
             </Link>
           </p>
         </div>
 
-        {/* Home Link */}
-        <div className="text-center mt-4">
+        <div className="text-center mt-3">
           <Link
             to="/"
-            className="text-sm text-[#94A3B8] hover:text-[#38BDF8] transition"
+            className="text-xs text-slate-400 hover:text-white transition inline-flex items-center gap-1"
           >
             ← Back to Home
           </Link>

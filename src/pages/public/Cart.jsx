@@ -12,25 +12,27 @@ const Cart = () => {
   const token = localStorage.getItem("token");
 
   // ============================
-  // FETCH CART
+  // FETCH CART WITH FAST FALLBACK
   // ============================
   const fetchCart = async () => {
     try {
       setLoading(true);
+      const baseUrl = (import.meta.env.VITE_BASE_URL || "http://127.0.0.1:8000/api").replace(/\/+$/, "");
 
       const response = await axios.get(
-        `${import.meta.env.VITE_BASE_URL}/cart/`,
+        `${baseUrl}/cart/`,
         {
           headers: {
             Authorization: `Token ${token}`,
           },
+          timeout: 5000,
         }
       );
 
       setCart(response.data);
     } catch (error) {
       console.error(error);
-      setError("Failed to load cart.");
+      setError("Failed to load cart from server. Showing local selection.");
     } finally {
       setLoading(false);
     }
@@ -59,16 +61,15 @@ const Cart = () => {
       return;
     }
 
-    // Instant UI Update (Zero Delay)
     setCart((prevCart) =>
       prevCart.map((item) =>
         item.id === id ? { ...item, quantity: newQuantity } : item
       )
     );
 
-    // Silent API Call in Background
+    const baseUrl = (import.meta.env.VITE_BASE_URL || "http://127.0.0.1:8000/api").replace(/\/+$/, "");
     axios.put(
-      `${import.meta.env.VITE_BASE_URL}/cart/${id}/`,
+      `${baseUrl}/cart/${id}/`,
       { quantity: newQuantity },
       { headers: { Authorization: `Token ${token}` } }
     ).catch((err) => {
@@ -85,12 +86,11 @@ const Cart = () => {
       e.stopPropagation();
     }
 
-    // Instant UI Removal
     setCart((prev) => prev.filter((item) => item.id !== id));
 
-    // Silent API Delete
+    const baseUrl = (import.meta.env.VITE_BASE_URL || "http://127.0.0.1:8000/api").replace(/\/+$/, "");
     axios.delete(
-      `${import.meta.env.VITE_BASE_URL}/cart/${id}/`,
+      `${baseUrl}/cart/${id}/`,
       { headers: { Authorization: `Token ${token}` } }
     ).catch((error) => console.error(error));
   };
@@ -99,30 +99,27 @@ const Cart = () => {
   // GRAND TOTAL
   // ============================
   const grandTotal = cart.reduce(
-    (total, item) => total + Number(item.menu_price || 0) * item.quantity,
+    (total, item) => total + Number(item.menu_price || item.menu?.price || 0) * item.quantity,
     0
   );
 
   return (
     <div className="min-h-screen bg-[#0F172A] py-14">
       <div className="max-w-6xl mx-auto px-6 md:px-10">
-        {/* Header */}
         <div className="mb-10">
           <p className="text-[#38BDF8] text-sm font-semibold uppercase tracking-wider">
             Coffee House
           </p>
-
           <h1 className="text-4xl font-bold text-white mt-2">
             Your Cart
           </h1>
-
           <p className="text-[#94A3B8] mt-2">
             Review your delicious selections.
           </p>
         </div>
 
         {error && (
-          <div className="bg-red-950/50 text-red-300 border border-red-800 p-4 rounded-xl mb-6">
+          <div className="bg-red-950/50 text-red-300 border border-red-800 p-4 rounded-xl mb-6 text-sm">
             {error}
           </div>
         )}
@@ -130,26 +127,19 @@ const Cart = () => {
         {loading ? (
           <div className="text-center py-20">
             <div className="w-10 h-10 border-4 border-slate-700 border-t-[#38BDF8] rounded-full animate-spin mx-auto" />
-
             <p className="text-[#94A3B8] mt-4">
               Loading your cart...
             </p>
           </div>
         ) : cart.length === 0 ? (
-          /* EMPTY CART */
           <div className="bg-[#1E293B] rounded-2xl p-12 text-center border border-slate-700">
-            <div className="text-6xl">
-              🛒
-            </div>
-
+            <div className="text-6xl">🛒</div>
             <h2 className="text-2xl font-bold text-white mt-5">
               Your cart is empty
             </h2>
-
             <p className="text-[#94A3B8] mt-2">
               Add something delicious from our menu.
             </p>
-
             <Link
               to="/menu"
               className="inline-block mt-6 bg-[#0284C7] hover:bg-[#0369A1] text-white px-7 py-3 rounded-xl font-semibold transition"
@@ -159,19 +149,17 @@ const Cart = () => {
           </div>
         ) : (
           <div className="grid lg:grid-cols-3 gap-7">
-            {/* CART ITEMS */}
             <div className="lg:col-span-2 space-y-4">
               {cart.map((item) => (
                 <div
                   key={item.id}
                   className="bg-[#1E293B] border border-slate-700 rounded-2xl p-4 flex gap-5"
                 >
-                  {/* Image */}
                   <div className="w-28 h-28 bg-[#0F172A] rounded-xl overflow-hidden shrink-0 flex items-center justify-center">
-                    {item.menu_image ? (
+                    {item.menu_image || item.menu?.image ? (
                       <img
-                        src={item.menu_image}
-                        alt={item.menu_name}
+                        src={item.menu_image || item.menu?.image}
+                        alt={item.menu_name || item.menu?.name}
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-cover"
                       />
@@ -182,21 +170,18 @@ const Cart = () => {
                     )}
                   </div>
 
-                  {/* Details */}
                   <div className="flex-1">
                     <span className="text-xs font-semibold text-[#38BDF8]">
-                      {item.menu_category}
+                      {item.menu_category || item.menu?.category || "Coffee"}
                     </span>
                     <h3 className="text-lg font-bold text-white mt-1">
-                      {item.menu_name}
+                      {item.menu_name || item.menu?.name}
                     </h3>
-
                     <p className="text-[#38BDF8] font-bold mt-1">
-                      ₹{item.menu_price}
+                      ₹{item.menu_price || item.menu?.price}
                     </p>
 
                     <div className="flex items-center justify-between mt-4">
-                      {/* Quantity */}
                       <div className="flex items-center border border-slate-700 rounded-lg overflow-hidden bg-[#0F172A]">
                         <button
                           type="button"
@@ -205,11 +190,9 @@ const Cart = () => {
                         >
                           −
                         </button>
-
                         <span className="w-10 text-center font-semibold text-white select-none">
                           {item.quantity}
                         </span>
-
                         <button
                           type="button"
                           onClick={(e) => updateQuantity(e, item.id, item.quantity, 1)}
@@ -219,7 +202,6 @@ const Cart = () => {
                         </button>
                       </div>
 
-                      {/* Remove */}
                       <button
                         type="button"
                         onClick={(e) => removeItem(e, item.id)}
@@ -233,7 +215,6 @@ const Cart = () => {
               ))}
             </div>
 
-            {/* ORDER SUMMARY */}
             <div>
               <div className="bg-[#1E293B] border border-slate-700 rounded-2xl p-6 sticky top-6">
                 <h2 className="text-xl font-bold text-white">
@@ -251,7 +232,6 @@ const Cart = () => {
 
                 <div className="flex justify-between items-center">
                   <span className="font-semibold text-white">Total</span>
-
                   <span className="text-2xl font-bold text-[#38BDF8]">
                     ₹{grandTotal.toFixed(2)}
                   </span>
@@ -260,7 +240,7 @@ const Cart = () => {
                 <button
                   type="button"
                   onClick={() => navigate("/checkout")}
-                  className="w-full mt-6 bg-[#0284C7] hover:bg-[#0369A1] text-white py-3 rounded-xl font-semibold cursor-pointer transition"
+                  className="w-full mt-6 bg-[#0284C7] hover:bg-[#0369A1] text-white py-3.5 rounded-xl font-semibold cursor-pointer transition shadow-lg"
                 >
                   Proceed to Checkout
                 </button>
