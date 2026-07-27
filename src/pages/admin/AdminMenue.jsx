@@ -14,7 +14,7 @@ const INITIAL_MENUS = [
 ];
 
 const AdminMenue = () => {
-  const BASE_URL = import.meta.env.VITE_BASE_URL || "";
+  const BASE_URL = "https://coffeehouse-backend-xtle.onrender.com" || "";
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
 

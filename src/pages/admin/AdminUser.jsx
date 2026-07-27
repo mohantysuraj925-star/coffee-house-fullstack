@@ -3,7 +3,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
 const AdminUser = () => {
-  const BASE_URL = import.meta.env.VITE_BASE_URL;
+  const BASE_URL = "https://coffeehouse-backend-xtle.onrender.com";
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
 

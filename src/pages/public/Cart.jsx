@@ -122,7 +122,7 @@ const Cart = () => {
   const formatImageUrl = (url) => {
     if (!url) return "https://images.unsplash.com/photo-1572442388796-11668ba67e53";
     if (url.startsWith("http://") || url.startsWith("https://")) return url;
-    const baseUrl = import.meta.env.VITE_BASE_URL || "";
+    const baseUrl = "https://coffeehouse-backend-xtle.onrender.com" || "";
     const cleanUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
     return `${cleanUrl}${url.startsWith("/") ? "" : "/"}${url}`;
   };
