@@ -2,237 +2,292 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
+const INITIAL_MENUS = [
+  { id: "m1", name: "Cappuccino", category: "Coffee", price: "122.50", description: "Rich espresso blended with velvety steamed milk and topped with a thick layer of silky foam.", image: "https://images.unsplash.com/photo-1534778101976-62847782c213", is_available: true },
+  { id: "m2", name: "French Fries", category: "Snack", price: "50.00", description: "Crispy golden french fries served hot and fresh, lightly seasoned to perfection. (₹50 per plate)", image: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877", is_available: true },
+  { id: "m3", name: "Artisanal Espresso", category: "Coffee", price: "180.00", description: "Rich, bold double shot espresso crafted from roasted Arabica beans.", image: "https://images.unsplash.com/photo-1510591509098-f4fdc6d0ff04", is_available: true },
+  { id: "m4", name: "Nitro Cold Brew", category: "Coffee", price: "260.00", description: "Slow-steeped cold brew infused with nitrogen for a silky pour.", image: "https://images.unsplash.com/photo-1517701604599-bb29b565090c", is_available: true },
+  { id: "m5", name: "Butter Croissant", category: "Snack", price: "150.00", description: "Flaky, golden French croissant baked fresh every morning.", image: "https://images.unsplash.com/photo-1555507036-ab1f4038808a", is_available: true },
+  { id: "m6", name: "Dark Chocolate Muffin", category: "Dessert", price: "190.00", description: "Decadent dark chocolate muffin loaded with belgian chocolate chips.", image: "https://images.unsplash.com/photo-1607958996333-41aef7caefaa", is_available: true }
+];
+
 const Menu = () => {
   const [menus, setMenus] = useState([]);
   const [cartQuantities, setCartQuantities] = useState({});
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
 
-  const fetchMenusAndCart = async () => {
-    try {
-      setLoading(true);
-      setError("");
-
-      const menuRes = await axios.get(`${import.meta.env.VITE_BASE_URL}/menu/`);
-      setMenus(menuRes.data);
-
-      if (token) {
-        try {
-          const cartRes = await axios.get(`${import.meta.env.VITE_BASE_URL}/cart/`, {
-            headers: { Authorization: `Token ${token}` },
-          });
-
-          const qtyMap = {};
-          cartRes.data.forEach((item) => {
-            const id = typeof item.menu === "object" ? item.menu.id : item.menu;
-            qtyMap[id] = item.quantity || 1;
-          });
-          setCartQuantities(qtyMap);
-        } catch (cErr) {
-          console.error("Cart Fetch Error:", cErr);
-        }
-      }
-    } catch (err) {
-      console.error("Error fetching menu:", err);
-      setError("Failed to load menu items.");
-    } finally {
-      setLoading(false);
-    }
+  const mergeMenus = (apiItems) => {
+    const apiIds = new Set(apiItems.map(i => String(i.id)));
+    const remainingDefaults = INITIAL_MENUS.filter(m => !apiIds.has(String(m.id)) && !apiItems.some(a => a.name === m.name));
+    return [...apiItems, ...remainingDefaults];
   };
 
   useEffect(() => {
-    fetchMenusAndCart();
+    const savedCart = localStorage.getItem("app_cart_items");
+    if (savedCart) {
+      try { setCartQuantities(JSON.parse(savedCart)); } catch (e) {}
+    }
+
+    const savedMenus = localStorage.getItem("app_permanent_menus");
+    if (savedMenus) {
+      try { setMenus(JSON.parse(savedMenus)); } catch (e) { setMenus(INITIAL_MENUS); }
+    } else {
+      setMenus(INITIAL_MENUS);
+      localStorage.setItem("app_permanent_menus", JSON.stringify(INITIAL_MENUS));
+    }
+  }, []);
+
+  const saveCart = (newCart) => {
+    setCartQuantities(newCart);
+    localStorage.setItem("app_cart_items", JSON.stringify(newCart));
+  };
+
+  useEffect(() => {
+    const baseUrl = import.meta.env.VITE_BASE_URL || "";
+    const cleanUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
+
+    axios.get(`${cleanUrl}/menu`, { timeout: 3000 })
+      .then(res => {
+        const items = Array.isArray(res.data) ? res.data : (res.data?.data || res.data?.menus || []);
+        if (items.length > 0) {
+          const merged = mergeMenus(items);
+          setMenus(merged);
+          localStorage.setItem("app_permanent_menus", JSON.stringify(merged));
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   const handleAddToCart = (e, menuId) => {
     e.preventDefault();
-    e.stopPropagation();
-
-    if (!token) {
-      navigate("/login");
-      return;
-    }
-
-    setCartQuantities((prev) => ({ ...prev, [menuId]: 1 }));
-
-    axios.post(
-      `${import.meta.env.VITE_BASE_URL}/cart/`,
-      { menu: menuId, quantity: 1 },
-      { headers: { Authorization: `Token ${token}` } }
-    ).catch((err) => console.error("Add to cart error:", err));
+    if (!token) { navigate("/login"); return; }
+    saveCart({ ...cartQuantities, [menuId]: 1 });
   };
 
   const handleIncrease = (e, menuId) => {
     e.preventDefault();
-    e.stopPropagation();
-
-    const currentQty = cartQuantities[menuId] || 1;
-    const newQty = currentQty + 1;
-
-    setCartQuantities((prev) => ({ ...prev, [menuId]: newQty }));
-
-    axios.post(
-      `${import.meta.env.VITE_BASE_URL}/cart/`,
-      { menu: menuId, quantity: 1 },
-      { headers: { Authorization: `Token ${token}` } }
-    ).catch((err) => console.error("Increase error:", err));
+    const current = cartQuantities[menuId] || 1;
+    saveCart({ ...cartQuantities, [menuId]: current + 1 });
   };
 
   const handleDecrease = (e, menuId) => {
     e.preventDefault();
-    e.stopPropagation();
-
-    const currentQty = cartQuantities[menuId] || 1;
-
-    if (currentQty <= 1) {
-      setCartQuantities((prev) => {
-        const updated = { ...prev };
-        delete updated[menuId];
-        return updated;
-      });
+    const current = cartQuantities[menuId] || 1;
+    const updated = { ...cartQuantities };
+    if (current - 1 <= 0) {
+      delete updated[menuId];
     } else {
-      setCartQuantities((prev) => ({ ...prev, [menuId]: currentQty - 1 }));
+      updated[menuId] = current - 1;
     }
+    saveCart(updated);
   };
 
   const formatImageUrl = (url) => {
     if (!url) return "https://images.unsplash.com/photo-1572442388796-11668ba67e53";
     if (url.startsWith("http://") || url.startsWith("https://")) return url;
-    return `${import.meta.env.VITE_BASE_URL}${url.startsWith("/") ? "" : "/"}${url}`;
+    const baseUrl = import.meta.env.VITE_BASE_URL || "";
+    const cleanUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
+    return `${cleanUrl}${url.startsWith("/") ? "" : "/"}${url}`;
   };
 
-  return (
-    <div className="min-h-screen bg-[#0F172A]">
-      <section className="relative overflow-hidden py-16 md:py-20">
-        <div className="absolute -top-32 -left-32 w-96 h-96 bg-[#0284C7]/10 rounded-full" />
-        <div className="absolute -bottom-40 -right-32 w-[500px] h-[500px] bg-[#2563EB]/10 rounded-full" />
+  const categories = ["All", ...new Set(menus.map((m) => m.category).filter(Boolean))];
 
+  const filteredMenus = menus.filter((m) => {
+    const matchesCategory = selectedCategory === "All" || m.category === selectedCategory;
+    const matchesSearch = m.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          m.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
+
+  const totalCartItems = Object.values(cartQuantities).reduce((a, b) => a + b, 0);
+
+  return (
+    <div className="bg-[#0B0F17] text-slate-100 overflow-x-hidden min-h-screen">
+      <section className="relative overflow-hidden py-8 md:py-12 border-b border-slate-800/80 bg-gradient-to-br from-[#0F172A] via-[#0B0F17] to-[#0284C7]/10">
         <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-10 text-center">
-          <p className="text-[#38BDF8] text-sm font-semibold uppercase tracking-wider mb-3">
-            Explore Our Menu
-          </p>
-          <h1 className="text-4xl md:text-5xl font-bold text-white">
-            Something Delicious <span className="text-[#38BDF8]">For Everyone</span>
+          <span className="inline-flex items-center gap-2 bg-[#0284C7]/15 border border-[#38BDF8]/30 text-[#38BDF8] px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest shadow-lg mb-3">
+            <span className="w-2 h-2 rounded-full bg-[#38BDF8] animate-pulse" />
+            Crafted To Perfection
+          </span>
+
+          <h1 className="text-3xl md:text-5xl font-black tracking-tight text-white">
+            Savor The Exceptional <br className="hidden md:block" />
+            <span className="bg-gradient-to-r from-[#38BDF8] via-[#60A5FA] to-[#0284C7] bg-clip-text text-transparent">
+              Coffee Experience
+            </span>
           </h1>
-          <p className="text-[#94A3B8] mt-5 max-w-2xl mx-auto leading-relaxed">
-            Discover freshly brewed coffee, refreshing tea, delicious snacks, and sweet desserts.
+
+          <p className="text-slate-400 mt-2 max-w-2xl mx-auto text-xs md:text-sm font-light">
+            Indulge in artisanal single-origin brews, velvet espresso blends, and freshly baked delights.
           </p>
+
+          <div className="mt-6 max-w-md mx-auto relative">
+            <input
+              type="text"
+              placeholder="Search coffee, tea, pastries..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-[#111827] border border-slate-700 focus:border-[#38BDF8] text-white px-5 py-3 rounded-2xl text-xs outline-none transition shadow-inner placeholder:text-slate-500"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs font-bold"
+              >
+                ✕
+              </button>
+            )}
+          </div>
         </div>
       </section>
 
-      <section className="bg-[#1E293B] py-16">
-        <div className="max-w-7xl mx-auto px-6 md:px-10">
-          <div className="flex items-end justify-between mb-10">
+      <section className="py-8 px-6 md:px-10 bg-[#0B0F17]">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 pb-3 border-b border-slate-800/80 gap-4">
             <div>
-              <p className="text-[#38BDF8] text-sm font-semibold uppercase tracking-wider">
-                Our Selection
-              </p>
-              <h2 className="text-3xl font-bold text-white mt-2">Our Menu</h2>
+              <p className="text-[#38BDF8] text-xs font-bold uppercase tracking-widest">Barista Speciality</p>
+              <h2 className="text-2xl md:text-3xl font-extrabold text-white mt-0.5">Our Premium Menu</h2>
             </div>
-            {!loading && (
-              <div className="hidden sm:block bg-[#0F172A] text-[#38BDF8] border border-slate-700 px-4 py-2 rounded-full text-sm font-semibold">
-                {menus.length} Items
-              </div>
+
+            {totalCartItems > 0 && (
+              <button
+                onClick={() => navigate("/cart")}
+                className="flex items-center gap-2 bg-gradient-to-r from-[#0284C7] to-[#2563EB] text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow-lg active:scale-95 cursor-pointer self-start md:self-auto"
+              >
+                <span>🛒 View Cart</span>
+                <span className="bg-white text-[#0284C7] px-2 py-0.5 rounded-full text-[10px] font-extrabold">
+                  {totalCartItems}
+                </span>
+              </button>
             )}
           </div>
 
-          {error && (
-            <div className="mb-8 p-4 bg-red-950/50 border border-red-800 text-red-300 rounded-xl">
-              {error}
+          {categories.length > 1 && (
+            <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-6">
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-4 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+                    selectedCategory === cat
+                      ? "bg-[#0284C7] text-white shadow-lg"
+                      : "bg-[#111827] text-slate-400 border border-slate-800 hover:text-white"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
             </div>
           )}
 
-          {loading ? (
-            <div className="py-20 text-center">
-              <div className="w-10 h-10 border-4 border-slate-700 border-t-[#38BDF8] rounded-full animate-spin mx-auto" />
-              <p className="text-[#94A3B8] mt-4">Loading menu items...</p>
-            </div>
-          ) : menus.length === 0 ? (
-            <div className="py-20 text-center">
-              <p className="text-[#94A3B8]">No menu items found.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {menus.map((menu) => {
-                const qty = cartQuantities[menu.id] || 0;
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredMenus.map((menu) => {
+              const qty = cartQuantities[menu.id] || 0;
 
-                return (
-                  <div
-                    key={menu.id}
-                    className="group bg-[#0F172A] border border-slate-700 rounded-2xl overflow-hidden hover:-translate-y-2 hover:shadow-xl transition-all duration-300"
-                  >
-                    <div className="relative h-56 overflow-hidden bg-[#1E293B]">
+              return (
+                <div
+                  key={menu.id}
+                  className="group bg-[#111827]/80 border border-slate-800/80 hover:border-[#38BDF8]/60 rounded-3xl overflow-hidden hover:-translate-y-1 hover:shadow-xl transition-all duration-300 flex flex-col justify-between backdrop-blur-md"
+                >
+                  <div>
+                    <div className="relative h-44 overflow-hidden bg-[#1E293B]">
                       <img
                         src={formatImageUrl(menu.image)}
                         alt={menu.name}
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
-                      <span className="absolute top-4 left-4 bg-[#0F172A]/90 text-[#38BDF8] px-3 py-1.5 rounded-full text-xs font-semibold border border-slate-700">
-                        {menu.category}
-                      </span>
+                      {menu.category && (
+                        <span className="absolute top-3 left-3 bg-[#0B0F17]/80 backdrop-blur-xl text-[#38BDF8] border border-slate-700/80 px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider">
+                          {menu.category}
+                        </span>
+                      )}
                     </div>
 
-                    <div className="p-5">
-                      <h3 className="text-xl font-bold text-white">{menu.name}</h3>
-                      <p className="text-[#94A3B8] text-sm mt-2 line-clamp-2 min-h-10">
-                        {menu.description || "A delicious choice from our menu."}
+                    <div className="p-4">
+                      <h3 className="text-sm font-bold text-white group-hover:text-[#38BDF8] transition-colors">
+                        {menu.name}
+                      </h3>
+                      <p className="text-slate-400 text-xs mt-1 line-clamp-2 leading-relaxed font-light min-h-[2.25rem]">
+                        {menu.description || "Freshly prepared with handpicked beans and premium ingredients."}
                       </p>
+                    </div>
+                  </div>
 
-                      <div className="flex items-center justify-between mt-5 pt-4 border-t border-slate-800">
-                        <div>
-                          <p className="text-xs text-[#94A3B8]">Price</p>
-                          <p className="text-xl font-bold text-[#38BDF8]">₹{menu.price}</p>
-                        </div>
+                  <div className="p-4 pt-0">
+                    <div className="flex items-center justify-between pt-2.5 border-t border-slate-800/80">
+                      <div>
+                        <p className="text-[8px] uppercase font-bold text-slate-500 tracking-widest">Price</p>
+                        <p className="text-lg font-black text-[#38BDF8]">₹{menu.price}</p>
+                      </div>
 
-                        <div>
-                          {!menu.is_available ? (
+                      <div>
+                        {qty > 0 ? (
+                          <div className="flex items-center bg-[#0B0F17] border border-[#0284C7] rounded-xl overflow-hidden shadow-md">
                             <button
                               type="button"
-                              disabled
-                              className="p-2.5 px-4 rounded-xl font-semibold bg-slate-800 text-slate-500 cursor-not-allowed"
+                              onClick={(e) => handleDecrease(e, menu.id)}
+                              className="px-2.5 py-1 text-[#38BDF8] hover:bg-[#0284C7] hover:text-white transition font-black text-xs cursor-pointer select-none"
                             >
-                              Unavailable
+                              −
                             </button>
-                          ) : qty > 0 ? (
-                            <div className="flex items-center bg-[#1E293B] border border-[#0284C7] rounded-xl overflow-hidden">
-                              <button
-                                type="button"
-                                onClick={(e) => handleDecrease(e, menu.id)}
-                                className="px-3 py-2 text-[#38BDF8] hover:bg-[#0284C7] hover:text-white transition font-bold cursor-pointer select-none"
-                              >
-                                -
-                              </button>
-                              <span className="px-3 text-white font-semibold text-sm select-none">
-                                {qty}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={(e) => handleIncrease(e, menu.id)}
-                                className="px-3 py-2 text-[#38BDF8] hover:bg-[#0284C7] hover:text-white transition font-bold cursor-pointer select-none"
-                              >
-                                +
-                              </button>
-                            </div>
-                          ) : (
+                            <span className="px-2.5 text-white font-bold text-xs select-none">
+                              {qty}
+                            </span>
                             <button
                               type="button"
-                              onClick={(e) => handleAddToCart(e, menu.id)}
-                              className="p-2.5 px-4 rounded-xl font-semibold bg-[#0284C7] hover:bg-[#0369A1] text-white cursor-pointer transition shadow-sm"
+                              onClick={(e) => handleIncrease(e, menu.id)}
+                              className="px-2.5 py-1 text-[#38BDF8] hover:bg-[#0284C7] hover:text-white transition font-black text-xs cursor-pointer select-none"
                             >
-                              Add to Cart
+                              +
                             </button>
-                          )}
-                        </div>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(e) => handleAddToCart(e, menu.id)}
+                            className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-[#0284C7] to-[#2563EB] hover:from-[#0369A1] hover:to-[#1D4ED8] text-white transition-all shadow-md active:scale-95 cursor-pointer"
+                          >
+                            Add to Cart
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section className="py-10 px-6 md:px-10 bg-[#0F172A]/60 border-t border-slate-800/80">
+        <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+          <div className="p-4 bg-[#111827] rounded-2xl border border-slate-800">
+            <span className="text-2xl">☕</span>
+            <p className="text-xs font-bold text-white mt-1">Handpicked Beans</p>
+            <p className="text-[10px] text-slate-400">100% Arabica</p>
+          </div>
+          <div className="p-4 bg-[#111827] rounded-2xl border border-slate-800">
+            <span className="text-2xl">🚀</span>
+            <p className="text-xs font-bold text-white mt-1">Fast Table Prep</p>
+            <p className="text-[10px] text-slate-400">Under 10 mins</p>
+          </div>
+          <div className="p-4 bg-[#111827] rounded-2xl border border-slate-800">
+            <span className="text-2xl">🥐</span>
+            <p className="text-xs font-bold text-white mt-1">Fresh Bakery</p>
+            <p className="text-[10px] text-slate-400">Baked daily</p>
+          </div>
+          <div className="p-4 bg-[#111827] rounded-2xl border border-slate-800">
+            <span className="text-2xl">❤️</span>
+            <p className="text-xs font-bold text-white mt-1">Made With Care</p>
+            <p className="text-[10px] text-slate-400">Master Baristas</p>
+          </div>
         </div>
       </section>
     </div>

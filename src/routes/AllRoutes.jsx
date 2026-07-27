@@ -11,6 +11,7 @@ import AdminUser from "../pages/admin/AdminUser";
 import AdminMenue from "../pages/admin/AdminMenue";
 import Cart from "../pages/public/Cart";
 import AdminCart from "../pages/admin/AdminCart";
+import Checkout from "../pages/public/Checkout";
 
 const AllRoutes = () => {
   return (
@@ -18,11 +19,10 @@ const AllRoutes = () => {
       <Route path="/" element={<Home />} />
       <Route path="/about" element={<About />} />
       <Route path="/menu" element={<Menu />} />
-
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-
       <Route path="/cart" element={<Cart />} />
+      <Route path="/checkout" element={<Checkout />} />
 
       <Route element={<AdminPrivateRoute />}>
         <Route path="admin/dashboard/" element={<AdminDashboard />} />

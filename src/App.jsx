@@ -1,21 +1,17 @@
-import "./App.css";
+import React from "react";
 import AllRoutes from "./routes/AllRoutes";
 import Navbar from "./components/common/Navbar";
-import { useLocation } from "react-router-dom";
 import Footer from "./components/common/Footer";
 
 function App() {
-  const location = useLocation();
-
-  const isAdminRoute = location.pathname.startsWith("/admin");
-
   return (
-    <>
-      {!isAdminRoute && <Navbar />}
-
-      <AllRoutes />
-      {!isAdminRoute && <Footer />}
-    </>
+    <div className="flex flex-col min-h-screen bg-[#0B0F17] text-white">
+      <Navbar />
+      <main className="flex-grow">
+        <AllRoutes />
+      </main>
+      <Footer />
+    </div>
   );
 }
 

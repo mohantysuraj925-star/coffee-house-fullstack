@@ -1,140 +1,96 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import logo from "../../assets/logo.png";
 
 const Footer = () => {
+  const [email, setEmail] = useState("");
+
+  const handleMailto = (e) => {
+    e.preventDefault();
+    if (!email) return;
+    const subject = encodeURIComponent("Coffee House Newsletter / Message");
+    const body = encodeURIComponent(`Hello Suraj,\n\nI want to connect or subscribe using this email: ${email}`);
+    window.location.href = `mailto:mohantysuraj925@gmail.com?subject=${subject}&body=${body}`;
+  };
+
   return (
-    <footer className="bg-[#0F172A] text-white border-t border-slate-800">
-      {/* Top Banner - Fills Gap Before Footer */}
-      <div className="bg-gradient-to-r from-[#1E293B] via-[#0284C7]/20 to-[#1E293B] border-b border-slate-800 py-8 px-6 text-center">
-        <div className="max-w-4xl mx-auto">
-          <span className="text-3xl">🎁☕✨</span>
-          <h3 className="text-xl md:text-2xl font-bold text-white mt-2">
-            Craving Special Handcrafted Coffee?
-          </h3>
-          <p className="text-[#94A3B8] text-sm mt-1">
-            Visit our outlet or explore our online menu for fresh brews & delicious snacks everyday! 🚀
-          </p>
+    <footer className="bg-[#0B1120] text-slate-300 border-t border-slate-800/80 mt-auto w-full">
+      <div className="bg-[#0F172A] border-b border-slate-800 py-4 px-6">
+        <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 text-center text-xs">
+          <div>⚡ Express Delivery</div>
+          <div>🌱 100% Organic Beans</div>
+          <div>🛡️ Safe & Hygienic</div>
+          <div>☕ Freshly Brewed</div>
         </div>
       </div>
 
-      {/* Main Footer */}
-      <div className="max-w-7xl mx-auto px-6 md:px-10 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
-
-          {/* Brand */}
-          <div className="lg:col-span-2">
+      <div className="max-w-7xl mx-auto px-6 py-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
+          <div className="lg:col-span-2 space-y-4">
             <Link to="/" className="inline-flex items-center gap-3">
-              <img
-                src={logo}
-                alt="Coffee House"
-                className="w-16 h-16 md:w-20 md:h-20 object-contain"
-              />
-
+              <img src={logo} alt="Coffee House" className="w-12 h-12 object-contain" />
               <div>
-                <h2 className="text-2xl font-bold text-white">
-                  Coffee House
-                </h2>
-
-                <p className="text-[#38BDF8] text-sm mt-1">
-                  Better Taste, Better Life
-                </p>
+                <h2 className="text-xl font-bold text-white">Coffee House</h2>
+                <p className="text-[#38BDF8] text-xs">Better Taste, Better Life</p>
               </div>
             </Link>
-
-            <p className="text-[#94A3B8] text-sm leading-relaxed mt-5 max-w-md">
-              Enjoy freshly brewed coffee, refreshing tea, delicious snacks,
-              and sweet desserts made to make every moment special.
+            <p className="text-xs text-slate-400 max-w-sm">
+              Handcrafted coffees, artisanal teas, and freshly baked pastries made daily with premium ingredients.
             </p>
           </div>
 
-          {/* Quick Links */}
           <div>
-            <h3 className="text-lg font-bold mb-5 text-white">
-              Quick Links
-            </h3>
-
-            <div className="flex flex-col gap-3">
-              <Link
-                to="/"
-                className="text-[#94A3B8] hover:text-[#38BDF8] transition"
-              >
-                Home
-              </Link>
-
-              <Link
-                to="/about"
-                className="text-[#94A3B8] hover:text-[#38BDF8] transition"
-              >
-                About Us
-              </Link>
-
-              <Link
-                to="/menu"
-                className="text-[#94A3B8] hover:text-[#38BDF8] transition"
-              >
-                Our Menu
-              </Link>
-
-              <Link
-                to="/login"
-                className="text-[#94A3B8] hover:text-[#38BDF8] transition"
-              >
-                Login
-              </Link>
+            <h3 className="text-xs font-bold text-[#38BDF8] mb-3">Navigation</h3>
+            <div className="flex flex-col gap-2 text-xs text-slate-400">
+              <Link to="/" className="hover:text-white">Home</Link>
+              <Link to="/about" className="hover:text-white">About Us</Link>
+              <Link to="/menu" className="hover:text-white">Menu</Link>
+              <Link to="/cart" className="hover:text-white">Cart</Link>
             </div>
           </div>
 
-          {/* Menu Categories */}
           <div>
-            <h3 className="text-lg font-bold mb-5 text-white">
-              Our Menu
-            </h3>
-
-            <div className="flex flex-col gap-3">
-              <Link
-                to="/menu?category=Coffee"
-                className="text-[#94A3B8] hover:text-[#38BDF8] transition"
-              >
-                Coffee
-              </Link>
-
-              <Link
-                to="/menu?category=Tea"
-                className="text-[#94A3B8] hover:text-[#38BDF8] transition"
-              >
-                Tea
-              </Link>
-
-              <Link
-                to="/menu?category=Snack"
-                className="text-[#94A3B8] hover:text-[#38BDF8] transition"
-              >
-                Snacks
-              </Link>
-
-              <Link
-                to="/menu?category=Dessert"
-                className="text-[#94A3B8] hover:text-[#38BDF8] transition"
-              >
-                Desserts
-              </Link>
+            <h3 className="text-xs font-bold text-[#38BDF8] mb-3">Categories</h3>
+            <div className="flex flex-col gap-2 text-xs text-slate-400">
+              <Link to="/menu" className="hover:text-white">Espresso & Coffee</Link>
+              <Link to="/menu" className="hover:text-white">Tea Blends</Link>
+              <Link to="/menu" className="hover:text-white">Pastries</Link>
+              <Link to="/menu" className="hover:text-white">Desserts</Link>
             </div>
           </div>
+
+          <div>
+            <h3 className="text-xs font-bold text-[#38BDF8] mb-3">Support</h3>
+            <div className="space-y-2 text-xs text-slate-400">
+              <p>Hours: 8 AM - 10 PM</p>
+              <p>Email: mohantysuraj925@gmail.com</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-8 pt-6 border-t border-slate-800 grid md:grid-cols-2 items-center gap-4">
+          <div>
+            <h4 className="text-xs font-bold text-white">Direct Email Connect ☕</h4>
+            <p className="text-[11px] text-slate-400">Enter your email to send a direct message to Suraj.</p>
+          </div>
+          <form onSubmit={handleMailto} className="flex gap-2">
+            <input 
+              type="email" 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email" 
+              required
+              className="bg-[#0F172A] border border-slate-700 px-3 py-2 rounded-xl text-xs text-white outline-none w-full" 
+            />
+            <button type="submit" className="bg-[#0284C7] text-white text-xs font-bold px-4 py-2 rounded-xl shrink-0 cursor-pointer">
+              Send
+            </button>
+          </form>
         </div>
       </div>
 
-      {/* Bottom Footer */}
-      <div className="border-t border-slate-800">
-        <div className="max-w-7xl mx-auto px-6 md:px-10 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-[#94A3B8] text-sm">
-            © {new Date().getFullYear()} Coffee House. All rights reserved.
-          </p>
-
-          <p className="text-[#94A3B8] text-sm">
-            Made with <span className="text-[#38BDF8]">♥</span> and Coffee ☕
-          </p>
-        </div>
+      <div className="border-t border-slate-800 bg-[#070C18] py-4 px-6 text-center text-xs text-slate-500">
+        © {new Date().getFullYear()} Coffee House App. All rights reserved.
       </div>
     </footer>
   );
