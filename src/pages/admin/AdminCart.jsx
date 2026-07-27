@@ -10,7 +10,7 @@ const CartManagement = () => {
 
   const fetchCarts = async () => {
     try {
-      const baseUrl = (import.meta.env.VITE_BASE_URL || "http://127.0.0.1:8000/api").replace(/\/+$/, "");
+      const baseUrl = (import.meta.env.VITE_BASE_URL || "https://coffeehouse-backend-xtle.onrender.com/api").replace(/\/+$/, "");
       const res = await axios.get(`${baseUrl}/cart/`, {
         headers: { Authorization: `Token ${token}` },
       });
