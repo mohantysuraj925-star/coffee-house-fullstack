@@ -16,7 +16,6 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Pre-warm the backend server as soon as Login component renders
   useEffect(() => {
     axios.get(`${API_BASE_URL}/`).catch(() => {});
   }, []);
@@ -39,8 +38,7 @@ const Login = () => {
         `${API_BASE_URL}/api/login/`,
         formData,
         { 
-          headers: { "Content-Type": "application/json" },
-          timeout: 15000 
+          headers: { "Content-Type": "application/json" }
         }
       );
 
@@ -60,15 +58,11 @@ const Login = () => {
         setError(response.data.message || "Invalid credentials");
       }
     } catch (err) {
-      if (err.code === "ECONNABORTED") {
-        setError("Server wake-up timed out. Please tap Sign In once more.");
-      } else {
-        setError(
-          err.response?.data?.message ||
-            err.response?.data?.detail ||
-            "Login failed. Check server logs."
-        );
-      }
+      setError(
+        err.response?.data?.message ||
+          err.response?.data?.detail ||
+          "Login failed. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -107,7 +101,6 @@ const Login = () => {
             {error}
           </div>
         )}
-
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-slate-300 mb-1.5">
@@ -147,7 +140,7 @@ const Login = () => {
             {loading ? (
               <span className="flex items-center justify-center gap-2 text-sm">
                 <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
-                Authenticating...
+                Connecting to server...
               </span>
             ) : (
               "Sign In"
