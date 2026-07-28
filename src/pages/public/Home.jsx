@@ -26,7 +26,7 @@ const Home = () => {
   };
 
   return (
-    <main className="bg-[#0B0F17] text-slate-100 min-h-screen">
+    <main className="bg-[#0B0F17] text-slate-100 h-auto pb-2">
       <Hero />
 
       {addedMsg && (
@@ -67,7 +67,7 @@ const Home = () => {
         </div>
       </section>
 
-      <section className="py-4 px-4 max-w-6xl mx-auto">
+      <section className="pt-4 pb-2 px-4 max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-3">
           <div>
             <span className="text-[#38BDF8] text-[10px] font-bold uppercase tracking-wider block">Must Try</span>

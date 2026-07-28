@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import logo from "../../assets/logo.png";
+
+const API_BASE_URL = "https://coffeehouse-backend-xtle.onrender.com";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -13,6 +15,11 @@ const Login = () => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Pre-warm the backend server as soon as Login component renders
+  useEffect(() => {
+    axios.get(`${API_BASE_URL}/`).catch(() => {});
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -29,9 +36,12 @@ const Login = () => {
 
     try {
       const response = await axios.post(
-        "https://coffeehouse-backend-xtle.onrender.com/api/login/",
+        `${API_BASE_URL}/api/login/`,
         formData,
-        { headers: { "Content-Type": "application/json" } }
+        { 
+          headers: { "Content-Type": "application/json" },
+          timeout: 15000 
+        }
       );
 
       if (response.data.token) {
@@ -50,11 +60,15 @@ const Login = () => {
         setError(response.data.message || "Invalid credentials");
       }
     } catch (err) {
-      setError(
-        err.response?.data?.message ||
-          err.response?.data?.detail ||
-          "Login failed. Check server logs."
-      );
+      if (err.code === "ECONNABORTED") {
+        setError("Server wake-up timed out. Please tap Sign In once more.");
+      } else {
+        setError(
+          err.response?.data?.message ||
+            err.response?.data?.detail ||
+            "Login failed. Check server logs."
+        );
+      }
     } finally {
       setLoading(false);
     }

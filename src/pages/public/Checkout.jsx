@@ -16,17 +16,12 @@ const Checkout = () => {
   const [deliveryNote, setDeliveryNote] = useState("");
   const [copied, setCopied] = useState(false);
   const [timeLeft, setTimeLeft] = useState(600);
-  const [promoCode, setPromoCode] = useState("");
-  const [discount, setDiscount] = useState(0);
-  const [promoApplied, setPromoCodeApplied] = useState(false);
-  const [promoError, setPromoError] = useState("");
 
   const [formData, setFormData] = useState({
-    name: "Suraj",
+    name: "",
     phone: "",
     address: "",
     pincode: "",
-    upiId: "Pushpanjali@upi",
     cardNumber: "",
     cardExpiry: "",
     cardCvv: "",
@@ -78,30 +73,36 @@ const Checkout = () => {
   }, [token]);
 
   const deliveryFee = subTotal > 0 ? 40 : 0;
-  const grandTotal = Math.max(0, subTotal + deliveryFee + tip - discount);
+  const grandTotal = Math.max(0, subTotal + deliveryFee + tip);
 
   const upiPayString = `upi://pay?pa=Pushpanjali@upi&pn=Coffee%20House&am=${grandTotal.toFixed(2)}&cu=INR`;
   const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(upiPayString)}`;
 
   const handleChange = (e) => setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
+  // HARD & STRICT VALIDATION LOGIC
+  const cleanName = formData.name.trim();
+  const cleanPhone = formData.phone.trim();
+  const cleanPincode = formData.pincode.trim();
+  const cleanAddress = formData.address.trim();
+
+  const isNameValid = cleanName.length >= 3 && /^[a-zA-Z\s]+$/.test(cleanName);
+  const isPhoneValid = /^[6-9]\d{9}$/.test(cleanPhone);
+  const isPincodeValid = /^\d{6}$/.test(cleanPincode);
+  const isAddressValid = cleanAddress.length >= 5;
+
+  const isCardValid =
+    paymentMethod !== "card" ||
+    (/^\d{16}$/.test(formData.cardNumber.replace(/\s/g, "")) &&
+      /^(0[1-9]|1[0-2])\/\d{2}$/.test(formData.cardExpiry) &&
+      /^\d{3}$/.test(formData.cardCvv));
+
+  const isFormValid = Boolean(isNameValid && isPhoneValid && isPincodeValid && isAddressValid && isCardValid);
+
   const handleCopyVpa = () => {
     navigator.clipboard.writeText("Pushpanjali@upi");
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
-
-  const applyPromoCode = (e) => {
-    e.preventDefault();
-    if (promoApplied) return;
-    const cleanCode = promoCode.trim().toUpperCase();
-    if (cleanCode === "COFFEE50" || cleanCode === "WELCOME10") {
-      setDiscount(50);
-      setPromoCodeApplied(true);
-      setPromoError("");
-    } else {
-      setPromoError("Invalid Code! Try COFFEE50");
-    }
   };
 
   const triggerAudioAndVoice = (name) => {
@@ -124,8 +125,7 @@ const Checkout = () => {
 
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel();
-      const userName = name.trim() || "Suraj";
-      const text = `${userName} pay... Payment of rupees ${grandTotal} successful on Coffee House.`;
+      const text = `${name} pay... Payment of rupees ${grandTotal} successful on Coffee House.`;
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 0.88;
       utterance.pitch = 1.0;
@@ -136,11 +136,12 @@ const Checkout = () => {
 
   const handlePayment = (e) => {
     e.preventDefault();
+    if (!isFormValid) return;
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
       setShowReceipt(true);
-      triggerAudioAndVoice(formData.name);
+      triggerAudioAndVoice(cleanName);
     }, 1800);
   };
 
@@ -161,7 +162,7 @@ const Checkout = () => {
               <p className="text-xs text-slate-400 mt-1 font-mono">{txnId}</p>
             </div>
             <div className="bg-[#0B0604] p-5 rounded-2xl border border-[#2A1710] text-left text-xs space-y-3">
-              <div className="flex justify-between text-slate-400"><span>Customer:</span><span className="text-white font-bold">{formData.name || "Suraj"}</span></div>
+              <div className="flex justify-between text-slate-400"><span>Customer:</span><span className="text-white font-bold">{formData.name}</span></div>
               <div className="flex justify-between text-slate-400"><span>Contact:</span><span className="text-white font-bold">{formData.phone}</span></div>
               <div className="flex justify-between text-slate-400"><span>Payment Mode:</span><span className="text-[#F59E0B] font-extrabold uppercase">{paymentMethod}</span></div>
               {tip > 0 && <div className="flex justify-between text-slate-400"><span>Partner Tip:</span><span className="text-amber-400 font-bold">₹{tip}</span></div>}
@@ -171,7 +172,6 @@ const Checkout = () => {
           </div>
         </div>
       )}
-
       <div className="relative z-10 max-w-6xl mx-auto">
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2.5 px-4 py-1.5 bg-[#140C09] border border-[#2A1710] rounded-full text-[#F59E0B] text-xs font-black uppercase tracking-widest mb-4">
@@ -188,28 +188,99 @@ const Checkout = () => {
                   <span className="w-8 h-8 rounded-xl bg-[#D97706]/20 text-[#F59E0B] border border-[#F59E0B]/30 flex items-center justify-center font-black text-xs">1</span>
                   <h2 className="text-sm font-extrabold text-white uppercase tracking-wider">Shipping Details</h2>
                 </div>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <input type="text" name="name" required value={formData.name} onChange={handleChange} placeholder="Full Name" className="w-full px-4 py-3.5 bg-[#070403] border border-[#2A1710] rounded-2xl text-white text-xs outline-none focus:border-[#F59E0B]" />
-                  <input type="tel" name="phone" required value={formData.phone} onChange={handleChange} placeholder="Mobile Number" className="w-full px-4 py-3.5 bg-[#070403] border border-[#2A1710] rounded-2xl text-white text-xs outline-none focus:border-[#F59E0B]" />
-                </div>
-                <div className="grid sm:grid-cols-3 gap-4">
-                  <input type="text" name="address" required value={formData.address} onChange={handleChange} placeholder="Address" className="sm:col-span-2 px-4 py-3.5 bg-[#070403] border border-[#2A1710] rounded-2xl text-white text-xs outline-none focus:border-[#F59E0B]" />
-                  <input type="text" name="pincode" required value={formData.pincode} onChange={handleChange} placeholder="Pincode" className="px-4 py-3.5 bg-[#070403] border border-[#2A1710] rounded-2xl text-white text-xs outline-none focus:border-[#F59E0B]" />
-                </div>
+                
                 <div>
-                  <input type="text" value={deliveryNote} onChange={(e) => setDeliveryNote(e.target.value)} placeholder="Delivery / Cooking Instructions (Optional)" className="w-full px-4 py-3 bg-[#070403] border border-[#2A1710] rounded-xl text-white text-xs outline-none focus:border-[#F59E0B]" />
+                  <label className="block text-[11px] font-bold text-slate-400 mb-1">FULL NAME *</label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    placeholder="Enter Full Name"
+                    className={`w-full px-4 py-3.5 bg-[#070403] border rounded-2xl text-white text-xs outline-none transition ${
+                      formData.name && !isNameValid ? "border-red-500" : "border-[#2A1710] focus:border-[#F59E0B]"
+                    }`}
+                  />
+                  {formData.name && !isNameValid && (
+                    <p className="text-[10px] text-red-400 mt-1">Name must be at least 3 letters.</p>
+                  )}
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-400 mb-1">MOBILE NUMBER (10 DIGITS) *</label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      maxLength={10}
+                      value={formData.phone}
+                      onChange={handleChange}
+                      placeholder="e.g. 9876543210"
+                      className={`w-full px-4 py-3.5 bg-[#070403] border rounded-2xl text-white text-xs outline-none transition ${
+                        formData.phone && !isPhoneValid ? "border-red-500" : "border-[#2A1710] focus:border-[#F59E0B]"
+                      }`}
+                    />
+                    {formData.phone && !isPhoneValid && (
+                      <p className="text-[10px] text-red-400 mt-1">Enter valid 10-digit Indian phone number.</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-400 mb-1">PINCODE (6 DIGITS) *</label>
+                    <input
+                      type="text"
+                      name="pincode"
+                      maxLength={6}
+                      value={formData.pincode}
+                      onChange={handleChange}
+                      placeholder="e.g. 751024"
+                      className={`w-full px-4 py-3.5 bg-[#070403] border rounded-2xl text-white text-xs outline-none transition ${
+                        formData.pincode && !isPincodeValid ? "border-red-500" : "border-[#2A1710] focus:border-[#F59E0B]"
+                      }`}
+                    />
+                    {formData.pincode && !isPincodeValid && (
+                      <p className="text-[10px] text-red-400 mt-1">Enter valid 6-digit pincode.</p>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-400 mb-1">DELIVERY ADDRESS *</label>
+                  <input
+                    type="text"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleChange}
+                    placeholder="Full Street / Hostel / Room Address"
+                    className={`w-full px-4 py-3.5 bg-[#070403] border rounded-2xl text-white text-xs outline-none transition ${
+                      formData.address && !isAddressValid ? "border-red-500" : "border-[#2A1710] focus:border-[#F59E0B]"
+                    }`}
+                  />
+                  {formData.address && !isAddressValid && (
+                    <p className="text-[10px] text-red-400 mt-1">Address must be at least 5 characters.</p>
+                  )}
+                </div>
+
+                <div>
+                  <input
+                    type="text"
+                    value={deliveryNote}
+                    onChange={(e) => setDeliveryNote(e.target.value)}
+                    placeholder="Delivery Instructions (Optional)"
+                    className="w-full px-4 py-3 bg-[#070403] border border-[#2A1710] rounded-xl text-white text-xs outline-none focus:border-[#F59E0B]"
+                  />
                 </div>
               </div>
 
               <div className="space-y-4">
                 <div className="flex items-center gap-3 pb-3 border-b border-[#2A1710]">
                   <span className="w-8 h-8 rounded-xl bg-[#D97706]/20 text-[#F59E0B] border border-[#F59E0B]/30 flex items-center justify-center font-black text-xs">2</span>
-                  <h2 className="text-sm font-extrabold text-white uppercase tracking-wider">Payment Options</h2>
+                  <h2 className="text-sm font-extrabold text-white uppercase tracking-wider">Payment Method</h2>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
-                  <button type="button" onClick={() => setPaymentMethod("upi")} className={`p-3 rounded-2xl border text-[11px] font-extrabold ${paymentMethod === "upi" ? "bg-[#D97706]/20 border-[#F59E0B] text-[#F59E0B]" : "bg-[#070403] border-[#2A1710] text-slate-400"}`}>📱 UPI QR</button>
-                  <button type="button" onClick={() => setPaymentMethod("card")} className={`p-3 rounded-2xl border text-[11px] font-extrabold ${paymentMethod === "card" ? "bg-[#D97706]/20 border-[#F59E0B] text-[#F59E0B]" : "bg-[#070403] border-[#2A1710] text-slate-400"}`}>💳 Card</button>
-                  <button type="button" onClick={() => setPaymentMethod("cod")} className={`p-3 rounded-2xl border text-[11px] font-extrabold ${paymentMethod === "cod" ? "bg-[#D97706]/20 border-[#F59E0B] text-[#F59E0B]" : "bg-[#070403] border-[#2A1710] text-slate-400"}`}>💵 Cash</button>
+                  <button type="button" onClick={() => setPaymentMethod("upi")} className={`p-3 rounded-2xl border text-[11px] font-extrabold cursor-pointer transition ${paymentMethod === "upi" ? "bg-[#D97706]/20 border-[#F59E0B] text-[#F59E0B]" : "bg-[#070403] border-[#2A1710] text-slate-400"}`}>📱 UPI QR</button>
+                  <button type="button" onClick={() => setPaymentMethod("card")} className={`p-3 rounded-2xl border text-[11px] font-extrabold cursor-pointer transition ${paymentMethod === "card" ? "bg-[#D97706]/20 border-[#F59E0B] text-[#F59E0B]" : "bg-[#070403] border-[#2A1710] text-slate-400"}`}>💳 Card</button>
+                  <button type="button" onClick={() => setPaymentMethod("cod")} className={`p-3 rounded-2xl border text-[11px] font-extrabold cursor-pointer transition ${paymentMethod === "cod" ? "bg-[#D97706]/20 border-[#F59E0B] text-[#F59E0B]" : "bg-[#070403] border-[#2A1710] text-slate-400"}`}>💵 Cash</button>
                 </div>
 
                 {paymentMethod === "upi" && (
@@ -224,7 +295,50 @@ const Checkout = () => {
                     </div>
                     <div className="flex gap-2">
                       <input type="text" readOnly value="Pushpanjali@upi" className="w-full px-4 py-3 bg-[#0B0604] border border-[#2A1710] rounded-xl text-white text-xs font-mono outline-none" />
-                      <button type="button" onClick={handleCopyVpa} className="px-4 py-3 bg-[#2A1710] text-[#F59E0B] rounded-xl text-xs font-bold border border-[#F59E0B]/30">{copied ? "Copied! ✓" : "Copy VPA"}</button>
+                      <button type="button" onClick={handleCopyVpa} className="px-4 py-3 bg-[#2A1710] text-[#F59E0B] rounded-xl text-xs font-bold border border-[#F59E0B]/30 cursor-pointer">{copied ? "Copied! ✓" : "Copy VPA"}</button>
+                    </div>
+                  </div>
+                )}
+
+                {paymentMethod === "card" && (
+                  <div className="bg-[#070403] border border-[#2A1710] rounded-2xl p-4 space-y-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 mb-1">CARD NUMBER (16 DIGITS)</label>
+                      <input
+                        type="text"
+                        name="cardNumber"
+                        maxLength={16}
+                        value={formData.cardNumber}
+                        onChange={handleChange}
+                        placeholder="4532 0123 4567 8910"
+                        className="w-full px-4 py-3 bg-[#0B0604] border border-[#2A1710] rounded-xl text-white text-xs outline-none focus:border-[#F59E0B]"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 mb-1">EXPIRY (MM/YY)</label>
+                        <input
+                          type="text"
+                          name="cardExpiry"
+                          maxLength={5}
+                          value={formData.cardExpiry}
+                          onChange={handleChange}
+                          placeholder="12/28"
+                          className="w-full px-4 py-3 bg-[#0B0604] border border-[#2A1710] rounded-xl text-white text-xs outline-none focus:border-[#F59E0B]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 mb-1">CVV</label>
+                        <input
+                          type="password"
+                          name="cardCvv"
+                          maxLength={3}
+                          value={formData.cardCvv}
+                          onChange={handleChange}
+                          placeholder="•••"
+                          className="w-full px-4 py-3 bg-[#0B0604] border border-[#2A1710] rounded-xl text-white text-xs outline-none focus:border-[#F59E0B]"
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
@@ -236,19 +350,28 @@ const Checkout = () => {
                 )}
               </div>
 
-              {/* Delivery Tip */}
               <div className="space-y-2">
                 <label className="block text-xs font-semibold text-slate-300">Add Delivery Partner Tip</label>
                 <div className="flex gap-2">
                   {[0, 20, 30, 50].map((amount) => (
-                    <button key={amount} type="button" onClick={() => setTip(amount)} className={`px-4 py-2 rounded-xl border text-xs font-bold ${tip === amount ? "bg-[#F59E0B] text-black border-[#F59E0B]" : "bg-[#070403] border-[#2A1710] text-slate-300"}`}>
+                    <button key={amount} type="button" onClick={() => setTip(amount)} className={`px-4 py-2 rounded-xl border text-xs font-bold cursor-pointer ${tip === amount ? "bg-[#F59E0B] text-black border-[#F59E0B]" : "bg-[#070403] border-[#2A1710] text-slate-300"}`}>
                       {amount === 0 ? "No Tip" : `+₹${amount}`}
                     </button>
                   ))}
                 </div>
               </div>
 
-              <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-[#92400E] via-[#D97706] to-[#F59E0B] text-white font-black py-4 rounded-2xl text-xs uppercase shadow-xl shadow-amber-900/20">{loading ? "Processing..." : `Pay ₹${grandTotal.toFixed(2)} Now`}</button>
+              <button
+                type="submit"
+                disabled={!isFormValid || loading}
+                className={`w-full py-4 rounded-2xl text-xs uppercase font-black transition shadow-xl ${
+                  isFormValid && !loading
+                    ? "bg-gradient-to-r from-[#92400E] via-[#D97706] to-[#F59E0B] text-white shadow-amber-900/20 cursor-pointer"
+                    : "bg-slate-800 text-slate-500 opacity-60 cursor-not-allowed border border-slate-700"
+                }`}
+              >
+                {loading ? "Processing..." : isFormValid ? `Pay ₹${grandTotal.toFixed(2)} Now` : "Fill All Valid Details To Pay"}
+              </button>
             </form>
           </div>
 
