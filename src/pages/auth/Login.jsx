@@ -15,6 +15,7 @@ const Login = () => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     axios.get(`${API_BASE_URL}/`).catch(() => {});
@@ -37,9 +38,7 @@ const Login = () => {
       const response = await axios.post(
         `${API_BASE_URL}/api/login/`,
         formData,
-        { 
-          headers: { "Content-Type": "application/json" }
-        }
+        { headers: { "Content-Type": "application/json" } }
       );
 
       if (response.data.token) {
@@ -69,41 +68,33 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-80px)] bg-[#0F172A] flex items-center justify-center px-4 py-8 relative overflow-hidden">
-      <div className="absolute top-10 left-10 w-72 h-72 bg-[#0284C7]/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-80 h-80 bg-[#2563EB]/20 rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-[calc(100vh-80px)] bg-[#0B132B] flex items-center justify-center px-4 py-8 relative overflow-hidden font-sans">
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-[#00A8E8]/20 rounded-full blur-[100px] pointer-events-none" />
 
-      <div className="relative z-10 w-full max-w-md bg-[#1E293B]/80 backdrop-blur-xl border border-slate-700/60 rounded-3xl shadow-2xl p-6 sm:p-8">
-        <div className="flex justify-center mb-3">
-          <div className="w-20 h-20 p-2 bg-[#0F172A]/60 rounded-2xl border border-slate-700/50 shadow-inner flex items-center justify-center">
-            <img
-              src={logo}
-              alt="Coffee House"
-              className="w-full h-full object-contain drop-shadow"
-            />
-          </div>
-        </div>
-
+      <div className="relative z-10 w-full max-w-md bg-[#1C2541] border border-sky-500/30 rounded-3xl shadow-[0_0_30px_rgba(0,168,232,0.15)] p-6 sm:p-8">
         <div className="text-center mb-6">
-          <span className="inline-block px-3 py-1 bg-[#38BDF8]/10 text-[#38BDF8] text-[11px] font-bold uppercase tracking-wider rounded-full mb-2 border border-[#38BDF8]/20">
-            Welcome Back ☕
+          <div className="w-16 h-16 p-2 bg-[#0B132B] rounded-2xl border border-sky-400/40 shadow-md mx-auto mb-4 flex items-center justify-center">
+            <img src={logo} alt="Coffee House" className="w-full h-full object-contain" />
+          </div>
+          <span className="inline-block px-3 py-1 bg-[#00A8E8]/20 text-[#00A8E8] text-[11px] font-extrabold uppercase tracking-widest rounded-full mb-2 border border-[#00A8E8]/40">
+            Encrypted Login ☕
           </span>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
-            Sign In to <span className="text-[#38BDF8]">Coffee House</span>
+          <h1 className="text-2xl font-black text-white tracking-tight">
+            Welcome Back
           </h1>
-          <p className="text-[#94A3B8] text-xs sm:text-sm mt-1">
-            Enjoy your favorite handcrafted coffee in one click.
+          <p className="text-sky-200/70 text-xs mt-1">
+            Access your Coffee House account
           </p>
         </div>
 
         {error && (
-          <div className="mb-4 px-4 py-3 bg-red-950/70 border border-red-800/80 text-red-300 text-xs rounded-xl shadow-sm">
+          <div className="mb-4 px-4 py-3 bg-red-900/60 border border-red-500 text-red-200 text-xs rounded-xl shadow-sm">
             {error}
           </div>
         )}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1.5">
+            <label className="block text-[11px] font-bold text-sky-200 mb-1.5 uppercase tracking-wider">
               Username
             </label>
             <input
@@ -113,60 +104,55 @@ const Login = () => {
               onChange={handleChange}
               placeholder="Enter your username"
               required
-              className="w-full px-4 py-3 bg-[#0F172A]/80 border border-slate-700 rounded-xl text-white text-sm placeholder:text-slate-500 outline-none focus:border-[#38BDF8] focus:ring-1 focus:ring-[#38BDF8] transition"
+              className="w-full px-4 py-3 bg-[#0B132B] border border-sky-500/40 rounded-xl text-white text-base placeholder:text-slate-400 outline-none focus:border-[#00A8E8] focus:ring-1 focus:ring-[#00A8E8] transition"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1.5">
+            <label className="block text-[11px] font-bold text-sky-200 mb-1.5 uppercase tracking-wider">
               Password
             </label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="Enter your password"
-              required
-              className="w-full px-4 py-3 bg-[#0F172A]/80 border border-slate-700 rounded-xl text-white text-sm placeholder:text-slate-500 outline-none focus:border-[#38BDF8] focus:ring-1 focus:ring-[#38BDF8] transition"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Enter your password"
+                required
+                className="w-full px-4 py-3 bg-[#0B132B] border border-sky-500/40 rounded-xl text-white text-base placeholder:text-slate-400 outline-none focus:border-[#00A8E8] focus:ring-1 focus:ring-[#00A8E8] transition pr-14"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 bg-sky-500/20 hover:bg-sky-500/40 text-sky-300 px-2 py-1 rounded-md text-[11px] font-bold border border-sky-400/30 cursor-pointer transition"
+              >
+                {showPassword ? "HIDE" : "SHOW"}
+              </button>
+            </div>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-2 bg-gradient-to-r from-[#0284C7] to-[#2563EB] hover:from-[#0369A1] hover:to-[#1D4ED8] disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition-all duration-300 shadow-md hover:shadow-cyan-500/20 active:scale-[0.99] cursor-pointer"
+            className="w-full mt-2 bg-[#00A8E8] hover:bg-[#007EA7] active:bg-[#003459] disabled:opacity-60 text-white font-black text-xs tracking-wider uppercase py-3.5 rounded-xl transition-all duration-200 shadow-lg shadow-sky-500/30 cursor-pointer border border-sky-300/30"
           >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2 text-sm">
-                <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
-                Connecting to server...
-              </span>
-            ) : (
-              "Sign In"
-            )}
+            {loading ? "Authenticating..." : "Sign In"}
           </button>
         </form>
 
-        <div className="text-center mt-6 pt-5 border-t border-slate-800">
-          <p className="text-xs text-[#94A3B8]">
+        <div className="text-center mt-6 pt-5 border-t border-sky-900/60 space-y-2 text-xs">
+          <p className="text-slate-300">
             Don't have an account?{" "}
-            <Link
-              to="/register"
-              className="text-[#38BDF8] hover:text-[#0284C7] font-semibold transition"
-            >
+            <Link to="/register" className="text-[#00A8E8] hover:text-sky-300 underline font-extrabold">
               Create Account
             </Link>
           </p>
-        </div>
-
-        <div className="text-center mt-3">
-          <Link
-            to="/"
-            className="text-xs text-slate-400 hover:text-white transition inline-flex items-center gap-1"
-          >
-            ← Back to Home
-          </Link>
+          <div>
+            <Link to="/" className="text-sky-200/60 hover:text-white">
+              ← Back to Home
+            </Link>
+          </div>
         </div>
       </div>
     </div>
