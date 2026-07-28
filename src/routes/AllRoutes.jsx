@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Home from "../pages/public/Home";
 import About from "../pages/public/About";
 import Menu from "../pages/public/Menu";
@@ -24,11 +24,18 @@ const AllRoutes = () => {
       <Route path="/cart" element={<Cart />} />
       <Route path="/checkout" element={<Checkout />} />
 
+      {/* Redirect /admin to /admin/dashboard */}
+      <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+
       <Route element={<AdminPrivateRoute />}>
-        <Route path="admin/dashboard/" element={<AdminDashboard />} />
-        <Route path="admin/users/" element={<AdminUser />} />
-        <Route path="admin/menu/" element={<AdminMenue />} />
-        <Route path="admin/cart/" element={<AdminCart />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/admin/dashboard/" element={<AdminDashboard />} />
+        <Route path="/admin/users" element={<AdminUser />} />
+        <Route path="/admin/users/" element={<AdminUser />} />
+        <Route path="/admin/menu" element={<AdminMenue />} />
+        <Route path="/admin/menu/" element={<AdminMenue />} />
+        <Route path="/admin/cart" element={<AdminCart />} />
+        <Route path="/admin/cart/" element={<AdminCart />} />
       </Route>
     </Routes>
   );

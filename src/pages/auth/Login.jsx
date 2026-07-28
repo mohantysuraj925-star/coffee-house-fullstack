@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
-import logo from "../../assets/logo.png";
+import { FiCoffee } from "react-icons/fi";
 
 const API_BASE_URL = "https://coffeehouse-backend-xtle.onrender.com";
 
@@ -13,9 +13,9 @@ const Login = () => {
     password: "",
   });
 
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     axios.get(`${API_BASE_URL}/`).catch(() => {});
@@ -38,7 +38,9 @@ const Login = () => {
       const response = await axios.post(
         `${API_BASE_URL}/api/login/`,
         formData,
-        { headers: { "Content-Type": "application/json" } }
+        {
+          headers: { "Content-Type": "application/json" }
+        }
       );
 
       if (response.data.token) {
@@ -68,33 +70,40 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-80px)] bg-[#0B132B] flex items-center justify-center px-4 py-8 relative overflow-hidden font-sans">
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-[#00A8E8]/20 rounded-full blur-[100px] pointer-events-none" />
+    <div className="flex-grow bg-[#120B07] text-amber-50 flex items-center justify-center px-4 py-12 relative overflow-hidden">
+      <div className="absolute top-10 left-10 w-72 h-72 bg-amber-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-10 right-10 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="relative z-10 w-full max-w-md bg-[#1C2541] border border-sky-500/30 rounded-3xl shadow-[0_0_30px_rgba(0,168,232,0.15)] p-6 sm:p-8">
-        <div className="text-center mb-6">
-          <div className="w-16 h-16 p-2 bg-[#0B132B] rounded-2xl border border-sky-400/40 shadow-md mx-auto mb-4 flex items-center justify-center">
-            <img src={logo} alt="Coffee House" className="w-full h-full object-contain" />
+      <div className="relative z-10 w-full max-w-md bg-gradient-to-b from-amber-950/80 to-amber-900/40 backdrop-blur-xl border border-amber-600/30 rounded-3xl shadow-2xl p-6 sm:p-8">
+        <div className="flex justify-center mb-3">
+          <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-amber-700 p-0.5 rounded-2xl shadow-lg shadow-amber-950/80">
+            <div className="w-full h-full bg-[#120B07] rounded-[14px] flex items-center justify-center text-amber-400 text-3xl">
+              <FiCoffee />
+            </div>
           </div>
-          <span className="inline-block px-3 py-1 bg-[#00A8E8]/20 text-[#00A8E8] text-[11px] font-extrabold uppercase tracking-widest rounded-full mb-2 border border-[#00A8E8]/40">
-            Encrypted Login ☕
+        </div>
+
+        <div className="text-center mb-6">
+          <span className="inline-block px-3 py-1 bg-amber-950 border border-amber-500/40 text-amber-300 text-[11px] font-bold uppercase tracking-wider rounded-full mb-2 shadow-md">
+            Welcome Back ☕
           </span>
-          <h1 className="text-2xl font-black text-white tracking-tight">
-            Welcome Back
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-amber-50">
+            Sign In to <span className="text-amber-400">Coffee House</span>
           </h1>
-          <p className="text-sky-200/70 text-xs mt-1">
-            Access your Coffee House account
+          <p className="text-amber-200/60 text-xs sm:text-sm mt-1">
+            Enjoy your favorite handcrafted coffee in one click.
           </p>
         </div>
 
         {error && (
-          <div className="mb-4 px-4 py-3 bg-red-900/60 border border-red-500 text-red-200 text-xs rounded-xl shadow-sm">
+          <div className="mb-4 px-4 py-3 bg-red-950/80 border border-red-600/40 text-red-300 text-xs font-semibold rounded-xl text-center">
             {error}
           </div>
         )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-[11px] font-bold text-sky-200 mb-1.5 uppercase tracking-wider">
+            <label className="block text-xs font-bold text-amber-200 mb-1.5">
               Username
             </label>
             <input
@@ -104,12 +113,12 @@ const Login = () => {
               onChange={handleChange}
               placeholder="Enter your username"
               required
-              className="w-full px-4 py-3 bg-[#0B132B] border border-sky-500/40 rounded-xl text-white text-base placeholder:text-slate-400 outline-none focus:border-[#00A8E8] focus:ring-1 focus:ring-[#00A8E8] transition"
+              className="w-full px-4 py-3 bg-amber-950/80 border border-amber-600/30 focus:border-amber-400 text-amber-50 text-sm placeholder:text-amber-200/40 outline-none rounded-xl transition"
             />
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold text-sky-200 mb-1.5 uppercase tracking-wider">
+            <label className="block text-xs font-bold text-amber-200 mb-1.5">
               Password
             </label>
             <div className="relative">
@@ -120,14 +129,14 @@ const Login = () => {
                 onChange={handleChange}
                 placeholder="Enter your password"
                 required
-                className="w-full px-4 py-3 bg-[#0B132B] border border-sky-500/40 rounded-xl text-white text-base placeholder:text-slate-400 outline-none focus:border-[#00A8E8] focus:ring-1 focus:ring-[#00A8E8] transition pr-14"
+                className="w-full px-4 py-3 pr-16 bg-amber-950/80 border border-amber-600/30 focus:border-amber-400 text-amber-50 text-sm placeholder:text-amber-200/40 outline-none rounded-xl transition"
               />
               <button
                 type="button"
-                onClick={() => setShowPassword((prev) => !prev)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 bg-sky-500/20 hover:bg-sky-500/40 text-sky-300 px-2 py-1 rounded-md text-[11px] font-bold border border-sky-400/30 cursor-pointer transition"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-amber-400 hover:text-amber-300 text-[11px] font-bold uppercase tracking-wider cursor-pointer select-none"
               >
-                {showPassword ? "HIDE" : "SHOW"}
+                {showPassword ? "Hide" : "Show"}
               </button>
             </div>
           </div>
@@ -135,24 +144,38 @@ const Login = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-2 bg-[#00A8E8] hover:bg-[#007EA7] active:bg-[#003459] disabled:opacity-60 text-white font-black text-xs tracking-wider uppercase py-3.5 rounded-xl transition-all duration-200 shadow-lg shadow-sky-500/30 cursor-pointer border border-sky-300/30"
+            className="w-full mt-2 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 disabled:opacity-60 text-white font-bold py-3 rounded-xl transition-all duration-300 shadow-lg shadow-amber-600/30 active:scale-[0.99] cursor-pointer"
           >
-            {loading ? "Authenticating..." : "Sign In"}
+            {loading ? (
+              <span className="flex items-center justify-center gap-2 text-sm">
+                <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+                Connecting to server...
+              </span>
+            ) : (
+              "Sign In"
+            )}
           </button>
         </form>
 
-        <div className="text-center mt-6 pt-5 border-t border-sky-900/60 space-y-2 text-xs">
-          <p className="text-slate-300">
+        <div className="text-center mt-6 pt-5 border-t border-amber-600/20">
+          <p className="text-xs text-amber-200/60">
             Don't have an account?{" "}
-            <Link to="/register" className="text-[#00A8E8] hover:text-sky-300 underline font-extrabold">
+            <Link
+              to="/register"
+              className="text-amber-400 hover:text-amber-300 font-bold transition underline"
+            >
               Create Account
             </Link>
           </p>
-          <div>
-            <Link to="/" className="text-sky-200/60 hover:text-white">
-              ← Back to Home
-            </Link>
-          </div>
+        </div>
+
+        <div className="text-center mt-3">
+          <Link
+            to="/"
+            className="text-xs text-amber-200/50 hover:text-amber-300 transition inline-flex items-center gap-1"
+          >
+            ← Back to Home
+          </Link>
         </div>
       </div>
     </div>

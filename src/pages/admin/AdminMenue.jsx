@@ -5,12 +5,12 @@ import { useNavigate } from "react-router-dom";
 const DEFAULT_PLACEHOLDER = "https://images.unsplash.com/photo-1572442388796-11668ba67e53?auto=format&fit=crop&w=600&q=80";
 
 const INITIAL_MENUS = [
-  { id: "m1", name: "Cappuccino", category: "Coffee", price: "122.50", description: "Rich espresso blended with velvety steamed milk and topped with a thick layer of silky foam.", image: "https://images.unsplash.com/photo-1534778101976-62847782c213", is_available: true },
-  { id: "m2", name: "French Fries", category: "Snack", price: "50.00", description: "Crispy golden french fries served hot and fresh, lightly seasoned to perfection. (₹50 per plate)", image: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877", is_available: true },
-  { id: "m3", name: "Artisanal Espresso", category: "Coffee", price: "180.00", description: "Rich, bold double shot espresso crafted from roasted Arabica beans.", image: "https://images.unsplash.com/photo-1510591509098-f4fdc6d0ff04", is_available: true },
-  { id: "m4", name: "Nitro Cold Brew", category: "Coffee", price: "260.00", description: "Slow-steeped cold brew infused with nitrogen for a silky pour.", image: "https://images.unsplash.com/photo-1517701604599-bb29b565090c", is_available: true },
-  { id: "m5", name: "Butter Croissant", category: "Snack", price: "150.00", description: "Flaky, golden French croissant baked fresh every morning.", image: "https://images.unsplash.com/photo-1555507036-ab1f4038808a", is_available: true },
-  { id: "m6", name: "Dark Chocolate Muffin", category: "Dessert", price: "190.00", description: "Decadent dark chocolate muffin loaded with belgian chocolate chips.", image: "https://images.unsplash.com/photo-1607958996333-41aef7caefaa", is_available: true }
+  { id: "m1", name: "Cappuccino", category: "Coffee", type: "veg", price: "122.50", description: "Rich espresso blended with velvety steamed milk and topped with a thick layer of silky foam.", image: "https://images.unsplash.com/photo-1534778101976-62847782c213", is_available: true },
+  { id: "m2", name: "French Fries", category: "Snack", type: "veg", price: "50.00", description: "Crispy golden french fries served hot and fresh, lightly seasoned to perfection.", image: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877", is_available: true },
+  { id: "m3", name: "Artisanal Espresso", category: "Coffee", type: "veg", price: "180.00", description: "Rich, bold double shot espresso crafted from roasted Arabica beans.", image: "https://images.unsplash.com/photo-1510591509098-f4fdc6d0ff04", is_available: true },
+  { id: "m4", name: "Nitro Cold Brew", category: "Coffee", type: "veg", price: "260.00", description: "Slow-steeped cold brew infused with nitrogen for a silky pour.", image: "https://images.unsplash.com/photo-1517701604599-bb29b565090c", is_available: true },
+  { id: "m5", name: "Butter Croissant", category: "Snack", type: "veg", price: "150.00", description: "Flaky, golden French croissant baked fresh every morning.", image: "https://images.unsplash.com/photo-1555507036-ab1f4038808a", is_available: true },
+  { id: "m6", name: "Dark Chocolate Muffin", category: "Dessert", type: "veg", price: "190.00", description: "Decadent dark chocolate muffin loaded with belgian chocolate chips.", image: "https://images.unsplash.com/photo-1607958996333-41aef7caefaa", is_available: true }
 ];
 
 const AdminMenue = () => {
@@ -21,6 +21,7 @@ const AdminMenue = () => {
   const initialFormData = {
     name: "",
     category: "Coffee",
+    type: "veg", // 'veg' or 'nonveg'
     description: "",
     price: "",
     image: "",
@@ -31,6 +32,8 @@ const AdminMenue = () => {
   const [formData, setFormData] = useState(initialFormData);
   const [editingId, setEditingId] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
 
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -108,7 +111,7 @@ const AdminMenue = () => {
       const newId = `m_${Date.now()}`;
       const newItem = { ...formData, id: newId };
       updatedList = [newItem, ...menus];
-      setMessage("Menu item added successfully.");
+      setMessage("New menu item added successfully.");
     }
 
     saveLocalData(updatedList);
@@ -136,6 +139,7 @@ const AdminMenue = () => {
     setFormData({
       name: menu.name || "",
       category: menu.category || "Coffee",
+      type: menu.type || (menu.is_veg === false ? "nonveg" : "veg"),
       description: menu.description || "",
       price: menu.price || "",
       image: menu.image || "",
@@ -192,95 +196,104 @@ const AdminMenue = () => {
     return `${BASE_URL}${cleanUrl.startsWith("/") ? "" : "/"}${cleanUrl}`;
   };
 
+  const filteredMenus = menus.filter((m) => {
+    const matchesCategory = selectedCategory === "All" || m.category === selectedCategory;
+    const matchesSearch = (m.name || "").toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
+
   return (
-    <div className="min-h-screen bg-[#0F172A] p-6 md:p-10 text-white">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
+    <div className="min-h-screen bg-[#1a0f07] text-amber-50 p-6 md:p-10">
+      <div className="max-w-7xl mx-auto space-y-6">
+        
+        {/* Navigation & Header */}
+        <div>
           <button
             onClick={() => navigate("/admin/dashboard")}
-            className="mb-6 flex items-center gap-2 text-[#94A3B8] hover:text-[#38BDF8] font-semibold transition cursor-pointer"
+            className="mb-4 flex items-center gap-2 text-amber-400 hover:text-amber-300 font-bold text-xs transition cursor-pointer"
           >
-            <span className="text-xl">←</span>
-            Back to Dashboard
+            ← Back to Control Center
           </button>
 
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 border-b border-amber-600/30 pb-6">
             <div>
-              <p className="text-[#38BDF8] text-sm font-semibold uppercase tracking-wider mb-2">
-                Coffee House Admin
-              </p>
-              <h1 className="text-3xl md:text-4xl font-bold text-white">
+              <span className="text-amber-400 text-xs font-bold uppercase tracking-wider block">
+                Catalog & Inventory
+              </span>
+              <h1 className="text-3xl md:text-4xl font-black text-amber-50 mt-1">
                 Menu Management
               </h1>
-              <p className="text-[#94A3B8] mt-2">
-                Manage all Coffee House items and update prices live.
+              <p className="text-amber-200/70 text-xs md:text-sm mt-1">
+                Add new dishes, set Veg/Non-Veg tags, update pricing & inventory live.
               </p>
             </div>
 
             <button
               onClick={handleAddMenu}
-              className="bg-[#0284C7] hover:bg-[#0369A1] text-white px-6 py-3 rounded-xl font-semibold cursor-pointer transition flex items-center justify-center gap-2 shadow-sm"
+              className="bg-amber-600 hover:bg-amber-500 text-white px-6 py-3 rounded-xl font-bold text-xs cursor-pointer transition flex items-center justify-center gap-2 shadow-lg shadow-amber-600/30"
             >
-              <span className="text-xl">+</span>
-              Add Menu Item
+              <span className="text-lg">+</span>
+              Add New Dish / Drink
             </button>
           </div>
         </div>
 
         {message && (
-          <div className="mb-6 p-4 bg-emerald-950/60 text-emerald-300 border border-emerald-800 rounded-xl">
+          <div className="p-4 bg-green-950/80 text-green-300 border border-green-600/40 rounded-2xl text-xs font-semibold">
             {message}
           </div>
         )}
 
         {error && (
-          <div className="mb-6 p-4 bg-red-950/60 text-red-300 border border-red-800 rounded-xl">
+          <div className="p-4 bg-red-950/80 text-red-300 border border-red-600/40 rounded-2xl text-xs font-semibold">
             {error}
           </div>
         )}
 
+        {/* Add/Edit Form Drawer */}
         {showForm && (
-          <div className="bg-[#1E293B] border border-slate-700 rounded-2xl p-6 md:p-8 mb-8 shadow-sm">
-            <div className="flex items-center justify-between mb-7">
+          <div className="bg-gradient-to-b from-amber-950/90 to-amber-900/50 border border-amber-600/40 rounded-3xl p-6 md:p-8 shadow-2xl space-y-6">
+            <div className="flex items-center justify-between border-b border-amber-600/30 pb-4">
               <div>
-                <h2 className="text-2xl font-bold text-white">
-                  {editingId ? "Update Menu Item" : "Add New Menu Item"}
+                <h2 className="text-xl font-black text-amber-50">
+                  {editingId ? "Update Item Details" : "Create New Menu Item"}
                 </h2>
-                <p className="text-sm text-[#94A3B8] mt-1">
-                  {editingId
-                    ? "Update details or change price."
-                    : "Add new item to permanent menu list."}
+                <p className="text-xs text-amber-200/60 mt-1">
+                  Fill in dish info, select dietary classification and live price.
                 </p>
               </div>
 
               <button
                 type="button"
                 onClick={handleCancel}
-                className="w-10 h-10 rounded-full bg-[#0F172A] text-white hover:bg-red-600 transition cursor-pointer flex items-center justify-center"
+                className="w-9 h-9 rounded-full bg-amber-950 text-amber-400 hover:bg-red-900 hover:text-white transition cursor-pointer flex items-center justify-center text-sm font-bold border border-amber-600/30"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} className="space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                
+                {/* Item Name */}
                 <div>
-                  <label className="block text-sm font-semibold text-white mb-2">
-                    Menu Name
+                  <label className="block text-xs font-bold text-amber-200 mb-2">
+                    Dish / Drink Name
                   </label>
                   <input
                     type="text"
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
-                    placeholder="e.g. Cappuccino"
+                    placeholder="e.g. Cheese Burst Pizza / Caramel Latte"
                     required
-                    className="w-full px-4 py-3 bg-[#0F172A] border border-slate-700 rounded-xl text-white outline-none focus:ring-2 focus:ring-[#0284C7]"
+                    className="w-full px-4 py-2.5 bg-amber-950/80 border border-amber-600/30 rounded-xl text-amber-50 text-xs outline-none focus:border-amber-400 placeholder:text-amber-200/40"
                   />
                 </div>
 
+                {/* Category */}
                 <div>
-                  <label className="block text-sm font-semibold text-white mb-2">
+                  <label className="block text-xs font-bold text-amber-200 mb-2">
                     Category
                   </label>
                   <select
@@ -288,18 +301,49 @@ const AdminMenue = () => {
                     value={formData.category}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-3 bg-[#0F172A] border border-slate-700 rounded-xl text-white outline-none focus:ring-2 focus:ring-[#0284C7]"
+                    className="w-full px-4 py-2.5 bg-amber-950/80 border border-amber-600/30 rounded-xl text-amber-50 text-xs outline-none focus:border-amber-400 cursor-pointer"
                   >
-                    <option value="Coffee">Coffee</option>
-                    <option value="Tea">Tea</option>
-                    <option value="Snack">Snack</option>
-                    <option value="Dessert">Dessert</option>
-                    <option value="Other">Other</option>
+                    <option value="Coffee" className="bg-[#180E0A]">☕ Coffee</option>
+                    <option value="Tea" className="bg-[#180E0A]">🍵 Tea & Blends</option>
+                    <option value="Pizza" className="bg-[#180E0A]">🍕 Pizza</option>
+                    <option value="Burger" className="bg-[#180E0A]">🍔 Burger</option>
+                    <option value="Snack" className="bg-[#180E0A]">🍟 Snacks & Fries</option>
+                    <option value="Ice-Cream" className="bg-[#180E0A]">🍨 Ice Creams</option>
+                    <option value="Dessert" className="bg-[#180E0A]">🍰 Pastries & Desserts</option>
+                    <option value="Other" className="bg-[#180E0A]">🍽️ Other Items</option>
                   </select>
                 </div>
 
+                {/* Dietary Type Selector (Veg / Non-Veg) */}
                 <div>
-                  <label className="block text-sm font-semibold text-white mb-2">
+                  <label className="block text-xs font-bold text-amber-200 mb-2">
+                    Dietary Classification
+                  </label>
+                  <div className="flex bg-amber-950/80 border border-amber-600/30 rounded-xl p-1">
+                    <button
+                      type="button"
+                      onClick={() => setFormData(p => ({ ...p, type: "veg" }))}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                        formData.type === "veg" ? "bg-green-700 text-white" : "text-amber-200/60 hover:text-white"
+                      }`}
+                    >
+                      🌱 Pure Veg
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData(p => ({ ...p, type: "nonveg" }))}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                        formData.type === "nonveg" ? "bg-red-700 text-white" : "text-amber-200/60 hover:text-white"
+                      }`}
+                    >
+                      🍗 Non-Veg
+                    </button>
+                  </div>
+                </div>
+
+                {/* Price */}
+                <div>
+                  <label className="block text-xs font-bold text-amber-200 mb-2">
                     Price (₹)
                   </label>
                   <input
@@ -311,12 +355,13 @@ const AdminMenue = () => {
                     min="0"
                     step="0.01"
                     required
-                    className="w-full px-4 py-3 bg-[#0F172A] border border-slate-700 rounded-xl text-white outline-none focus:ring-2 focus:ring-[#0284C7]"
+                    className="w-full px-4 py-2.5 bg-amber-950/80 border border-amber-600/30 rounded-xl text-amber-50 text-xs outline-none focus:border-amber-400 placeholder:text-amber-200/40"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-white mb-2">
+                {/* Image URL */}
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-bold text-amber-200 mb-2">
                     Image URL
                   </label>
                   <input
@@ -324,120 +369,149 @@ const AdminMenue = () => {
                     name="image"
                     value={formData.image}
                     onChange={handleChange}
-                    placeholder="https://example.com/image.jpg"
-                    className="w-full px-4 py-3 bg-[#0F172A] border border-slate-700 rounded-xl text-white outline-none focus:ring-2 focus:ring-[#0284C7]"
+                    placeholder="https://images.unsplash.com/your-image.jpg"
+                    className="w-full px-4 py-2.5 bg-amber-950/80 border border-amber-600/30 rounded-xl text-amber-50 text-xs outline-none focus:border-amber-400 placeholder:text-amber-200/40"
                   />
                 </div>
 
+                {/* Description */}
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold text-white mb-2">
+                  <label className="block text-xs font-bold text-amber-200 mb-2">
                     Description
                   </label>
                   <textarea
                     name="description"
                     value={formData.description}
                     onChange={handleChange}
-                    placeholder="Enter menu item description"
-                    rows="3"
-                    className="w-full px-4 py-3 bg-[#0F172A] border border-slate-700 rounded-xl text-white outline-none focus:ring-2 focus:ring-[#0284C7] resize-none"
+                    placeholder="Describe flavor profile, ingredients, or serving size..."
+                    rows="2"
+                    className="w-full px-4 py-2.5 bg-amber-950/80 border border-amber-600/30 rounded-xl text-amber-50 text-xs outline-none focus:border-amber-400 placeholder:text-amber-200/40 resize-none"
                   />
                 </div>
 
-                {formData.image && (
-                  <div className="md:col-span-2">
-                    <p className="text-sm font-semibold text-white mb-2">
-                      Image Preview
-                    </p>
-                    <img
-                      src={formatImageUrl(formData.image)}
-                      alt="Menu Preview"
-                      referrerPolicy="no-referrer"
-                      className="w-28 h-28 object-cover rounded-xl border border-slate-700"
-                    />
-                  </div>
-                )}
-
-                <div className="md:col-span-2 flex items-center gap-3">
+                {/* Availability Checkbox */}
+                <div className="md:col-span-2 flex items-center gap-2">
                   <input
                     type="checkbox"
                     id="is_available"
                     name="is_available"
                     checked={formData.is_available}
                     onChange={handleChange}
-                    className="w-5 h-5 accent-[#0284C7]"
+                    className="w-4 h-4 accent-amber-500 cursor-pointer"
                   />
-                  <label htmlFor="is_available" className="text-white font-semibold cursor-pointer">
-                    Available for Order
+                  <label htmlFor="is_available" className="text-amber-50 text-xs font-bold cursor-pointer">
+                    Available for Live Orders
                   </label>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-4 mt-6">
+              <div className="flex justify-end gap-3 border-t border-amber-600/30 pt-4">
                 <button
                   type="button"
                   onClick={handleCancel}
-                  className="px-6 py-2.5 rounded-xl border border-slate-700 text-[#94A3B8] hover:bg-slate-800 transition"
+                  className="px-5 py-2 rounded-xl border border-amber-600/30 text-amber-200/70 hover:text-white text-xs font-bold transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-6 py-2.5 rounded-xl bg-[#0284C7] hover:bg-[#0369A1] text-white font-semibold transition cursor-pointer"
+                  className="px-6 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs transition cursor-pointer shadow-lg shadow-amber-600/30"
                 >
-                  {loading ? "Saving..." : editingId ? "Update Item" : "Add Item"}
+                  {loading ? "Saving..." : editingId ? "Update Item" : "Publish Item"}
                 </button>
               </div>
             </form>
           </div>
         )}
 
+        {/* Filter & Search Bar */}
+        <div className="bg-gradient-to-b from-amber-950/80 to-amber-900/40 border border-amber-600/30 p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4">
+          <input
+            type="text"
+            placeholder="Filter menu item by name..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full md:w-80 bg-amber-950/90 border border-amber-600/30 text-amber-50 px-4 py-2 rounded-xl text-xs outline-none focus:border-amber-400 placeholder:text-amber-200/40"
+          />
+
+          <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
+            {["All", "Coffee", "Tea", "Pizza", "Burger", "Snack", "Ice-Cream", "Dessert"].map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-3 py-1 rounded-xl text-[11px] font-bold whitespace-nowrap cursor-pointer transition ${
+                  selectedCategory === cat ? "bg-amber-600 text-white" : "bg-amber-950 text-amber-200/60 hover:text-white"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Items Grid */}
         {fetching && menus.length === 0 ? (
-          <div className="py-20 text-center">
-            <div className="w-10 h-10 border-4 border-slate-700 border-t-[#38BDF8] rounded-full animate-spin mx-auto" />
-            <p className="text-[#94A3B8] mt-4">Loading menu management list...</p>
+          <div className="py-20 text-center space-y-3">
+            <div className="w-10 h-10 border-4 border-amber-600/30 border-t-amber-400 rounded-full animate-spin mx-auto" />
+            <p className="text-amber-200/60 text-xs font-bold">Fetching Live Menu Catalog...</p>
+          </div>
+        ) : filteredMenus.length === 0 ? (
+          <div className="bg-amber-950/40 border border-amber-600/30 rounded-3xl p-12 text-center text-amber-200/60 text-xs">
+            No menu items found matching filters.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {menus.map((menu) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredMenus.map((menu) => (
               <div
                 key={menu.id}
-                className="bg-[#1E293B] border border-slate-700 rounded-2xl overflow-hidden flex flex-col justify-between shadow-lg"
+                className="group bg-gradient-to-b from-amber-950/60 to-amber-900/30 border border-amber-600/30 hover:border-amber-400/60 rounded-3xl overflow-hidden shadow-xl flex flex-col justify-between transition duration-300"
               >
                 <div>
-                  <div className="h-44 bg-[#0F172A] relative overflow-hidden flex items-center justify-center">
+                  <div className="h-44 bg-amber-950 relative overflow-hidden">
                     <img
                       src={formatImageUrl(menu.image)}
                       alt={menu.name}
                       referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    <span className="absolute top-3 left-3 bg-[#0F172A]/90 text-[#38BDF8] border border-slate-700 text-xs px-3 py-1 rounded-full font-semibold">
+                    <span className="absolute top-3 left-3 bg-amber-950/90 backdrop-blur-md text-amber-300 border border-amber-500/30 text-[9px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
                       {menu.category}
+                    </span>
+
+                    {/* Veg / Non-Veg Badge */}
+                    <span className={`absolute top-3 right-3 px-2.5 py-0.5 rounded-full text-[9px] font-bold border backdrop-blur-md uppercase tracking-wider ${
+                      menu.type === "nonveg" || menu.is_veg === false
+                        ? "bg-red-950/90 text-red-400 border-red-500/40"
+                        : "bg-green-950/90 text-green-400 border-green-500/40"
+                    }`}>
+                      {menu.type === "nonveg" || menu.is_veg === false ? "🍗 Non-Veg" : "🌱 Veg"}
                     </span>
                   </div>
 
                   <div className="p-5">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-bold text-white">{menu.name}</h3>
-                      <span className="text-lg font-black text-[#38BDF8]">₹{menu.price}</span>
+                      <h3 className="text-sm font-bold text-amber-50 group-hover:text-amber-400 transition-colors">
+                        {menu.name}
+                      </h3>
+                      <span className="text-base font-black text-amber-400">₹{menu.price}</span>
                     </div>
-                    <p className="text-[#94A3B8] text-xs mt-2 line-clamp-2">
-                      {menu.description || "Freshly brewed specialty item."}
+                    <p className="text-amber-200/60 text-xs mt-1.5 line-clamp-2 leading-relaxed">
+                      {menu.description || "Freshly prepared specialty item."}
                     </p>
                   </div>
                 </div>
 
-                <div className="p-4 border-t border-slate-800 flex items-center justify-between bg-[#111827]">
+                <div className="p-4 border-t border-amber-600/20 flex items-center justify-between bg-amber-950/60">
                   <button
                     onClick={() => handleEdit(menu)}
-                    className="bg-[#0284C7]/20 border border-[#38BDF8]/40 text-[#38BDF8] hover:bg-[#0284C7] hover:text-white px-4 py-1.5 rounded-lg font-semibold text-xs transition cursor-pointer"
+                    className="bg-amber-600/20 border border-amber-500/40 text-amber-300 hover:bg-amber-600 hover:text-white px-3.5 py-1.5 rounded-xl font-bold text-xs transition cursor-pointer"
                   >
-                    Edit Price / Details
+                    Edit Item
                   </button>
                   <button
                     onClick={() => handleDelete(menu.id)}
-                    className="text-red-400 hover:text-red-300 font-semibold text-xs cursor-pointer hover:underline"
+                    className="text-red-400 hover:text-red-300 font-bold text-xs cursor-pointer hover:underline"
                   >
                     Delete
                   </button>
@@ -446,6 +520,7 @@ const AdminMenue = () => {
             ))}
           </div>
         )}
+
       </div>
     </div>
   );

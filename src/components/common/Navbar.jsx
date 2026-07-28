@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { FiShoppingCart, FiUser, FiLogOut, FiLayout, FiMenu, FiX } from "react-icons/fi";
-import logo from "../../assets/logo.png";
+import Logo from "./Logo";
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -11,8 +11,7 @@ const Navbar = () => {
   const isSuperuser = localStorage.getItem("is_superuser") === "true";
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("is_superuser");
+    localStorage.clear();
     navigate("/login");
   };
 
@@ -23,32 +22,21 @@ const Navbar = () => {
   ];
 
   return (
-    <nav className="bg-[#0F172A] border-b-4 border-[#38BDF8] relative z-50">
-      <div className="max-w-7xl mx-auto px-4 md:px-10 h-20 flex items-center justify-between">
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-3">
-          <img
-            src={logo}
-            alt="Coffee House"
-            className="w-12 h-12 md:w-16 md:h-16 object-contain"
-          />
-          <div>
-            <h1 className="text-white text-lg md:text-xl font-bold">Coffee House</h1>
-            <p className="text-[#38BDF8] text-[10px] md:text-xs">Better Taste, Better Life</p>
-          </div>
-        </Link>
+    <nav className="fixed top-0 left-0 right-0 bg-amber-950/40 backdrop-blur-md border-b border-amber-500/40 z-50 shadow-lg shadow-amber-950/40 w-full">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 h-14 md:h-16 flex items-center justify-between">
+        <Logo />
 
-        {/* Desktop Navigation Links */}
-        <div className="hidden md:flex items-center gap-8">
+        {/* Desktop Links */}
+        <div className="hidden md:flex items-center gap-6">
           {navLinks.map((item) => (
             <NavLink
               key={item.name}
               to={item.path}
               className={({ isActive }) =>
-                `font-medium transition ${
+                `font-bold text-xs md:text-sm tracking-wide transition ${
                   isActive
-                    ? "text-[#38BDF8]"
-                    : "text-white hover:text-[#38BDF8]"
+                    ? "text-amber-300 border-b-2 border-amber-400 pb-0.5 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]"
+                    : "text-amber-100/90 hover:text-amber-300"
                 }`
               }
             >
@@ -58,22 +46,22 @@ const Navbar = () => {
           {token && (
             <Link
               to="/cart"
-              className="text-white hover:text-[#38BDF8] font-medium transition flex items-center gap-1.5"
+              className="text-amber-100/90 hover:text-amber-300 font-bold text-xs md:text-sm transition flex items-center gap-1"
             >
-              <FiShoppingCart className="text-lg" />
+              <FiShoppingCart className="text-sm text-amber-400" />
               Cart
             </Link>
           )}
         </div>
 
-        {/* Right Side Desktop */}
-        <div className="hidden md:flex items-center gap-3">
+        {/* Right Desktop */}
+        <div className="hidden md:flex items-center gap-2.5">
           {token && isSuperuser && (
             <Link
               to="/admin/dashboard/"
-              className="px-4 py-2 text-white font-medium hover:text-[#38BDF8] transition flex items-center gap-2"
+              className="px-3 py-1 text-amber-300 font-bold hover:text-amber-100 transition flex items-center gap-1 border border-amber-500/50 bg-amber-900/40 backdrop-blur-sm rounded-lg text-xs shadow-md"
             >
-              <FiLayout className="text-lg" />
+              <FiLayout className="text-sm text-amber-400" />
               Dashboard
             </Link>
           )}
@@ -81,9 +69,9 @@ const Navbar = () => {
           {!token && (
             <Link
               to="/login"
-              className="bg-[#0284C7] hover:bg-[#0369A1] text-white px-5 py-2 rounded-lg font-semibold transition flex items-center gap-2"
+              className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-amber-950 font-black px-3.5 py-1.5 rounded-lg text-xs transition flex items-center gap-1 shadow-md shadow-amber-500/20 active:scale-95"
             >
-              <FiUser className="text-lg" />
+              <FiUser className="text-xs text-amber-950" />
               Login
             </Link>
           )}
@@ -91,41 +79,46 @@ const Navbar = () => {
           {token && (
             <button
               onClick={handleLogout}
-              className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white px-5 py-2 rounded-lg font-semibold transition cursor-pointer flex items-center gap-2"
+              className="bg-red-950/80 hover:bg-red-900 text-red-300 border border-red-500/40 px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1"
             >
-              <FiLogOut className="text-lg" />
+              <FiLogOut className="text-xs" />
               Logout
             </button>
           )}
         </div>
 
-        {/* Mobile Hamburger Button */}
-        <div className="flex md:hidden items-center gap-2">
+        {/* Mobile Hamburger */}
+        <div className="flex md:hidden items-center gap-1.5">
           {token && (
-            <Link to="/cart" className="text-white p-2 text-xl">
+            <Link to="/cart" className="text-amber-400 p-1.5 text-base">
               <FiShoppingCart />
+            </Link>
+          )}
+          {token && isSuperuser && (
+            <Link to="/admin/dashboard/" className="text-amber-400 p-1.5 text-base">
+              <FiLayout />
             </Link>
           )}
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="text-white p-2 text-2xl focus:outline-none"
+            className="text-amber-300 p-1.5 text-xl focus:outline-none"
           >
             {isOpen ? <FiX /> : <FiMenu />}
           </button>
         </div>
       </div>
 
-      {/* Mobile Dropdown Menu */}
+      {/* Mobile Dropdown */}
       {isOpen && (
-        <div className="md:hidden bg-[#1E293B] border-b-2 border-[#38BDF8] px-6 py-4 flex flex-col gap-4">
+        <div className="md:hidden bg-amber-950/95 backdrop-blur-xl border-b border-amber-500/40 px-5 py-3 flex flex-col gap-2.5 shadow-2xl">
           {navLinks.map((item) => (
             <NavLink
               key={item.name}
               to={item.path}
               onClick={() => setIsOpen(false)}
               className={({ isActive }) =>
-                `font-medium py-1 text-base transition ${
-                  isActive ? "text-[#38BDF8]" : "text-white"
+                `font-bold py-1 text-xs transition ${
+                  isActive ? "text-amber-300 font-black" : "text-amber-100/80"
                 }`
               }
             >
@@ -137,10 +130,10 @@ const Navbar = () => {
             <Link
               to="/admin/dashboard/"
               onClick={() => setIsOpen(false)}
-              className="text-white py-1 font-medium flex items-center gap-2"
+              className="text-amber-300 py-1 font-bold text-xs flex items-center gap-1.5"
             >
-              <FiLayout />
-              Dashboard
+              <FiLayout className="text-amber-400 text-sm" />
+              Dashboard (Admin)
             </Link>
           )}
 
@@ -148,7 +141,7 @@ const Navbar = () => {
             <Link
               to="/login"
               onClick={() => setIsOpen(false)}
-              className="bg-[#0284C7] text-white px-4 py-2 rounded-lg text-center font-semibold flex items-center justify-center gap-2"
+              className="bg-gradient-to-r from-amber-500 to-amber-600 text-amber-950 px-3 py-1.5 rounded-lg text-center text-xs font-black flex items-center justify-center gap-1.5 shadow-md"
             >
               <FiUser />
               Login
@@ -159,7 +152,7 @@ const Navbar = () => {
                 setIsOpen(false);
                 handleLogout();
               }}
-              className="bg-[#2563EB] text-white px-4 py-2 rounded-lg font-semibold flex items-center justify-center gap-2"
+              className="bg-red-950/80 text-red-300 border border-red-500/40 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5"
             >
               <FiLogOut />
               Logout

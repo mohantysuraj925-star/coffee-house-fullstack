@@ -5,9 +5,9 @@ import Footer from "./components/common/Footer";
 
 function App() {
   return (
-    <div className="flex flex-col min-h-screen bg-[#0B0F17] text-white">
+    <div className="flex flex-col min-h-screen bg-[#120B07] text-amber-50">
       <Navbar />
-      <main className="flex-grow">
+      <main className="flex-grow flex flex-col pt-14 md:pt-16">
         <AllRoutes />
       </main>
       <Footer />

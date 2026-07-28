@@ -10,6 +10,10 @@ const Menu = () => {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortOrder, setSortOrder] = useState("default");
+  const [foodType, setFoodType] = useState("all");
+  const [isSortOpen, setIsSortOpen] = useState(false);
+
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
 
@@ -29,7 +33,6 @@ const Menu = () => {
 
   useEffect(() => {
     setLoading(true);
-    // Fetch menu with multiple endpoint fallbacks matching admin dashboard
     const fetchMenuData = async () => {
       try {
         let res = await axios.get(`${API_BASE_URL}/api/menu/`).catch(() => null);
@@ -98,7 +101,7 @@ const Menu = () => {
     ),
   ];
 
-  const filteredMenus = menus.filter((m) => {
+  let filteredMenus = menus.filter((m) => {
     const itemCat = typeof m.category === "object" ? m.category?.name : m.category;
     const matchesCategory = selectedCategory === "All" || itemCat === selectedCategory;
     const matchesSearch =
@@ -108,43 +111,63 @@ const Menu = () => {
       (m.description || "")
         .toLowerCase()
         .includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
+
+    const isItemNonVeg = m.is_veg === false || m.type === "nonveg" || (m.category && String(m.category).toLowerCase().includes("non"));
+
+    let matchesType = true;
+    if (foodType === "veg") {
+      matchesType = !isItemNonVeg;
+    } else if (foodType === "nonveg") {
+      matchesType = isItemNonVeg;
+    }
+
+    return matchesCategory && matchesSearch && matchesType;
   });
+
+  if (sortOrder === "lowToHigh") {
+    filteredMenus = [...filteredMenus].sort((a, b) => Number(a.price) - Number(b.price));
+  } else if (sortOrder === "highToLow") {
+    filteredMenus = [...filteredMenus].sort((a, b) => Number(b.price) - Number(a.price));
+  }
 
   const totalCartItems = Object.values(cartQuantities).reduce((a, b) => a + b, 0);
 
+  const sortLabels = {
+    default: "Sort: Featured",
+    lowToHigh: "Price: Low to High",
+    highToLow: "Price: High to Low"
+  };
+
   return (
-    <div className="bg-[#0B0F17] text-slate-100 overflow-x-hidden min-h-screen">
-      <section className="relative overflow-hidden py-8 md:py-12 border-b border-slate-800/80 bg-gradient-to-br from-[#0F172A] via-[#0B0F17] to-[#0284C7]/10">
-        <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-10 text-center">
-          <span className="inline-flex items-center gap-2 bg-[#0284C7]/15 border border-[#38BDF8]/30 text-[#38BDF8] px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest shadow-lg mb-3">
-            <span className="w-2 h-2 rounded-full bg-[#38BDF8] animate-pulse" />
+    <div className="bg-[#1a0f07] text-amber-50 min-h-screen overflow-x-hidden w-full">
+      {/* Header Banner */}
+      <section className="relative py-8 md:py-10 border-b border-amber-600/30 bg-gradient-to-b from-[#120B07] via-[#1a0f07] to-amber-950/30 px-4">
+        <div className="max-w-6xl mx-auto text-center space-y-3">
+          <span className="inline-flex items-center gap-2 bg-amber-950/80 border border-amber-500/40 text-amber-300 px-3.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-md">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
             Crafted To Perfection
           </span>
 
-          <h1 className="text-3xl md:text-5xl font-black tracking-tight text-white">
-            Savor The Exceptional <br className="hidden md:block" />
-            <span className="bg-gradient-to-r from-[#38BDF8] via-[#60A5FA] to-[#0284C7] bg-clip-text text-transparent">
-              Coffee Experience
-            </span>
+          <h1 className="text-2xl md:text-4xl font-black text-amber-50 leading-tight">
+            Savor The Exceptional <span className="text-amber-400">Coffee & Bites</span>
           </h1>
 
-          <p className="text-slate-400 mt-2 max-w-2xl mx-auto text-xs md:text-sm font-light">
-            Indulge in artisanal single-origin brews, velvet espresso blends, and freshly baked delights.
+          <p className="text-amber-200/70 max-w-xl mx-auto text-xs font-light">
+            Indulge in artisanal single-origin brews, pizzas, burgers, and fresh delights.
           </p>
 
-          <div className="mt-6 max-w-md mx-auto relative">
+          <div className="max-w-md mx-auto relative pt-2">
             <input
               type="text"
-              placeholder="Search coffee, tea, pastries..."
+              placeholder="Search coffee, pizza, burger, pastries..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#111827] border border-slate-700 focus:border-[#38BDF8] text-white px-5 py-3 rounded-2xl text-xs outline-none transition shadow-inner placeholder:text-slate-500"
+              className="w-full bg-amber-950/80 border border-amber-600/30 focus:border-amber-400 text-amber-50 px-4 py-2.5 rounded-xl text-xs outline-none transition placeholder:text-amber-200/40"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs font-bold"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-amber-300 hover:text-white text-xs font-bold"
               >
                 ✕
               </button>
@@ -153,139 +176,234 @@ const Menu = () => {
         </div>
       </section>
 
-      <section className="py-8 px-6 md:px-10 bg-[#0B0F17]">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 pb-3 border-b border-slate-800/80 gap-4">
-            <div>
-              <p className="text-[#38BDF8] text-xs font-bold uppercase tracking-widest">Barista Speciality</p>
-              <h2 className="text-2xl md:text-3xl font-extrabold text-white mt-0.5">Our Premium Menu</h2>
+      {/* Main Section */}
+      <section className="py-6 px-4 md:px-8 max-w-6xl mx-auto space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-amber-600/30 gap-4">
+          <div>
+            <p className="text-amber-400 text-xs font-bold uppercase tracking-widest">Barista & Kitchen Specials</p>
+            <h2 className="text-xl md:text-2xl font-black text-amber-50 mt-0.5">Our Full Menu</h2>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Filter Buttons with Dot Indicators */}
+            <div className="flex items-center bg-amber-950/80 border border-amber-600/30 rounded-xl p-1 text-xs gap-1">
+              <button
+                onClick={() => setFoodType("all")}
+                className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
+                  foodType === "all" ? "bg-amber-600 text-white" : "text-amber-200/70 hover:text-white"
+                }`}
+              >
+                All
+              </button>
+
+              <button
+                onClick={() => setFoodType("veg")}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
+                  foodType === "veg" ? "bg-amber-600 text-white" : "text-amber-200/70 hover:text-white"
+                }`}
+              >
+                <span className="w-2.5 h-2.5 border border-green-500 flex items-center justify-center p-0.5 rounded-sm">
+                  <span className="w-1 h-1 bg-green-500 rounded-full"></span>
+                </span>
+                Veg
+              </button>
+
+              <button
+                onClick={() => setFoodType("nonveg")}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
+                  foodType === "nonveg" ? "bg-amber-600 text-white" : "text-amber-200/70 hover:text-white"
+                }`}
+              >
+                <span className="w-2.5 h-2.5 border border-red-500 flex items-center justify-center p-0.5 rounded-sm">
+                  <span className="w-1 h-1 bg-red-500 rounded-full"></span>
+                </span>
+                Non-Veg
+              </button>
+            </div>
+
+            {/* Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setIsSortOpen(!isSortOpen)}
+                className="bg-amber-950/90 border border-amber-600/40 text-amber-200 text-xs font-bold px-3 py-1.5 rounded-xl outline-none cursor-pointer flex items-center gap-1.5"
+              >
+                <span>{sortLabels[sortOrder]}</span>
+                <span className="text-[10px] text-amber-400">▼</span>
+              </button>
+
+              {isSortOpen && (
+                <div className="absolute right-0 mt-2 w-44 bg-[#180E0A] border border-amber-600/40 rounded-xl shadow-2xl py-1 z-50">
+                  <button
+                    onClick={() => { setSortOrder("default"); setIsSortOpen(false); }}
+                    className={`w-full text-left px-3 py-1.5 text-xs font-bold transition ${
+                      sortOrder === "default" ? "text-amber-400 bg-amber-950/60" : "text-amber-200/80 hover:bg-amber-950/40"
+                    }`}
+                  >
+                    Sort: Featured
+                  </button>
+                  <button
+                    onClick={() => { setSortOrder("lowToHigh"); setIsSortOpen(false); }}
+                    className={`w-full text-left px-3 py-1.5 text-xs font-bold transition ${
+                      sortOrder === "lowToHigh" ? "text-amber-400 bg-amber-950/60" : "text-amber-200/80 hover:bg-amber-950/40"
+                    }`}
+                  >
+                    Price: Low to High
+                  </button>
+                  <button
+                    onClick={() => { setSortOrder("highToLow"); setIsSortOpen(false); }}
+                    className={`w-full text-left px-3 py-1.5 text-xs font-bold transition ${
+                      sortOrder === "highToLow" ? "text-amber-400 bg-amber-950/60" : "text-amber-200/80 hover:bg-amber-950/40"
+                    }`}
+                  >
+                    Price: High to Low
+                  </button>
+                </div>
+              )}
             </div>
 
             {totalCartItems > 0 && (
               <button
                 onClick={() => navigate("/cart")}
-                className="flex items-center gap-2 bg-gradient-to-r from-[#0284C7] to-[#2563EB] text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow-lg active:scale-95 cursor-pointer self-start md:self-auto"
+                className="flex items-center gap-1.5 bg-gradient-to-r from-amber-600 to-amber-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-md"
               >
-                <span>🛒 View Cart</span>
-                <span className="bg-white text-[#0284C7] px-2 py-0.5 rounded-full text-[10px] font-extrabold">
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+                <span>Cart</span>
+                <span className="bg-amber-950 text-amber-300 px-2 py-0.5 rounded-full text-[10px] font-black">
                   {totalCartItems}
                 </span>
               </button>
             )}
           </div>
+        </div>
 
-          {categories.length > 1 && (
-            <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-6">
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`px-4 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
-                    selectedCategory === cat
-                      ? "bg-[#0284C7] text-white shadow-lg"
-                      : "bg-[#111827] text-slate-400 border border-slate-800 hover:text-white"
-                  }`}
+        {/* Categories */}
+        {categories.length > 1 && (
+          <div className="flex items-center gap-2 overflow-x-auto pb-2">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-3.5 py-1 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+                  selectedCategory === cat
+                    ? "bg-amber-600 text-white shadow-md"
+                    : "bg-amber-950/60 text-amber-200/70 border border-amber-600/30 hover:text-white"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Menu Grid */}
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((idx) => (
+              <div key={idx} className="bg-amber-950/40 border border-amber-600/20 rounded-2xl h-56 animate-pulse" />
+            ))}
+          </div>
+        ) : filteredMenus.length === 0 ? (
+          <div className="text-center py-12 text-amber-200/50 text-xs font-semibold">
+            No menu items found.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {filteredMenus.map((menu) => {
+              const itemId = menu.id || menu._id;
+              const qty = cartQuantities[itemId] || 0;
+              const categoryName = typeof menu.category === "object" ? menu.category?.name : menu.category;
+              const itemName = menu.name || menu.title;
+              const isNonVeg = menu.is_veg === false || menu.type === "nonveg" || (menu.category && String(menu.category).toLowerCase().includes("non"));
+
+              return (
+                <div
+                  key={itemId}
+                  className="group bg-gradient-to-b from-amber-950/60 to-amber-900/30 border border-amber-600/30 hover:border-amber-400/60 rounded-2xl overflow-hidden flex flex-col justify-between transition duration-300 shadow-md"
                 >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {[1, 2, 3, 4, 5, 6].map((idx) => (
-                <div key={idx} className="bg-[#111827] border border-slate-800/80 rounded-3xl p-4 h-64 animate-pulse" />
-              ))}
-            </div>
-          ) : filteredMenus.length === 0 ? (
-            <div className="text-center py-12 text-slate-400 text-xs">
-              No menu items found.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredMenus.map((menu) => {
-                const itemId = menu.id || menu._id;
-                const qty = cartQuantities[itemId] || 0;
-                const categoryName = typeof menu.category === "object" ? menu.category?.name : menu.category;
-                const itemName = menu.name || menu.title;
-
-                return (
-                  <div
-                    key={itemId}
-                    className="group bg-[#111827]/80 border border-slate-800/80 hover:border-[#38BDF8]/60 rounded-3xl overflow-hidden hover:-translate-y-1 hover:shadow-xl transition-all duration-300 flex flex-col justify-between backdrop-blur-md"
-                  >
-                    <div>
-                      <div className="relative h-44 overflow-hidden bg-[#1E293B]">
-                        <img
-                          src={formatImageUrl(menu.image || menu.item_image)}
-                          alt={itemName}
-                          referrerPolicy="no-referrer"
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                        {categoryName && (
-                          <span className="absolute top-3 left-3 bg-[#0B0F17]/80 backdrop-blur-xl text-[#38BDF8] border border-slate-700/80 px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider">
-                            {categoryName}
+                  <div>
+                    <div className="relative h-36 w-full overflow-hidden bg-[#180E0A] shrink-0">
+                      <img
+                        src={formatImageUrl(menu.image || menu.item_image)}
+                        alt={itemName}
+                        loading="eager"
+                        decoding="async"
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      
+                      {/* Show Red Non-Veg Badge ONLY if item is Non-Veg */}
+                      {isNonVeg && (
+                        <span className="absolute top-2 left-2 bg-red-950/90 text-red-300 border border-red-500/50 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase flex items-center gap-1">
+                          <span className="w-2 h-2 border border-red-500 flex items-center justify-center p-0.5 rounded-sm">
+                            <span className="w-1 h-1 bg-red-500 rounded-full"></span>
                           </span>
-                        )}
-                      </div>
+                          Non-Veg
+                        </span>
+                      )}
 
-                      <div className="p-4">
-                        <h3 className="text-sm font-bold text-white group-hover:text-[#38BDF8] transition-colors">
-                          {itemName}
-                        </h3>
-                        <p className="text-slate-400 text-xs mt-1 line-clamp-2 leading-relaxed font-light min-h-[2.25rem]">
-                          {menu.description || "Freshly prepared with handpicked beans and premium ingredients."}
-                        </p>
-                      </div>
+                      {categoryName && !isNonVeg && (
+                        <span className="absolute top-2 left-2 bg-amber-950/90 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase">
+                          {categoryName}
+                        </span>
+                      )}
                     </div>
 
-                    <div className="p-4 pt-0">
-                      <div className="flex items-center justify-between pt-2.5 border-t border-slate-800/80">
-                        <div>
-                          <p className="text-[8px] uppercase font-bold text-slate-500 tracking-widest">Price</p>
-                          <p className="text-lg font-black text-[#38BDF8]">₹{menu.price}</p>
-                        </div>
+                    <div className="p-3">
+                      <h3 className="text-xs font-bold text-amber-50 truncate">
+                        {itemName}
+                      </h3>
+                      <p className="text-amber-200/60 text-[11px] mt-1 line-clamp-2 leading-tight font-light h-7">
+                        {menu.description || "Freshly prepared specialty item."}
+                      </p>
+                    </div>
+                  </div>
 
-                        <div>
-                          {qty > 0 ? (
-                            <div className="flex items-center bg-[#0B0F17] border border-[#0284C7] rounded-xl overflow-hidden shadow-md">
-                              <button
-                                type="button"
-                                onClick={(e) => handleDecrease(e, itemId)}
-                                className="px-2.5 py-1 text-[#38BDF8] hover:bg-[#0284C7] hover:text-white transition font-black text-xs cursor-pointer select-none"
-                              >
-                                −
-                              </button>
-                              <span className="px-2.5 text-white font-bold text-xs select-none">
-                                {qty}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={(e) => handleIncrease(e, itemId)}
-                                className="px-2.5 py-1 text-[#38BDF8] hover:bg-[#0284C7] hover:text-white transition font-black text-xs cursor-pointer select-none"
-                              >
-                                +
-                              </button>
-                            </div>
-                          ) : (
+                  <div className="p-3 pt-0">
+                    <div className="flex items-center justify-between pt-2 border-t border-amber-600/20">
+                      <div>
+                        <p className="text-sm font-black text-amber-400">₹{menu.price}</p>
+                      </div>
+
+                      <div>
+                        {qty > 0 ? (
+                          <div className="flex items-center bg-amber-950 border border-amber-500/40 rounded-lg overflow-hidden">
                             <button
                               type="button"
-                              onClick={(e) => handleAddToCart(e, itemId)}
-                              className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-[#0284C7] to-[#2563EB] hover:from-[#0369A1] hover:to-[#1D4ED8] text-white transition-all shadow-md active:scale-95 cursor-pointer"
+                              onClick={(e) => handleDecrease(e, itemId)}
+                              className="px-2 py-0.5 text-amber-300 hover:bg-amber-600 hover:text-white font-black text-xs transition select-none"
                             >
-                              Add to Cart
+                              −
                             </button>
-                          )}
-                        </div>
+                            <span className="px-2 text-amber-50 font-bold text-xs select-none">
+                              {qty}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => handleIncrease(e, itemId)}
+                              className="px-2 py-0.5 text-amber-300 hover:bg-amber-600 hover:text-white font-black text-xs transition select-none"
+                            >
+                              +
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(e) => handleAddToCart(e, itemId)}
+                            className="px-3 py-1 rounded-lg text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white transition shadow-sm cursor-pointer"
+                          >
+                            Add
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
     </div>
   );
