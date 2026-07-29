@@ -40,6 +40,8 @@ const AdminMenue = () => {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
+  const [deleteModal, setDeleteModal] = useState({ show: false, id: null, name: "" });
+
   const saveLocalData = (data) => {
     setMenus(data);
     localStorage.setItem("app_permanent_menus", JSON.stringify(data));
@@ -162,9 +164,13 @@ const AdminMenue = () => {
     });
   };
 
-  const handleDelete = async (id) => {
-    const confirmDelete = window.confirm("Are you sure you want to delete this menu item?");
-    if (!confirmDelete) return;
+  const confirmDeleteModal = (menu) => {
+    setDeleteModal({ show: true, id: menu.id, name: menu.name });
+  };
+
+  const executeDelete = async () => {
+    const id = deleteModal.id;
+    if (!id) return;
 
     setError("");
     setMessage("");
@@ -185,6 +191,8 @@ const AdminMenue = () => {
       setFormData(initialFormData);
       setShowForm(false);
     }
+
+    setDeleteModal({ show: false, id: null, name: "" });
   };
 
   const handleCancel = () => {
@@ -222,7 +230,7 @@ const AdminMenue = () => {
   });
 
   return (
-    <div className="min-h-screen bg-[#1a0f07] text-amber-50 p-6 md:p-10">
+    <div className="min-h-screen bg-[#1a0f07] text-amber-50 p-6 md:p-10 relative">
       <div className="max-w-7xl mx-auto space-y-6">
 
         <div>
@@ -556,7 +564,7 @@ const AdminMenue = () => {
                     Edit Item
                   </button>
                   <button
-                    onClick={() => handleDelete(menu.id)}
+                    onClick={() => confirmDeleteModal(menu)}
                     className="text-red-400 hover:text-red-300 font-bold text-xs cursor-pointer hover:underline"
                   >
                     Delete
@@ -568,6 +576,41 @@ const AdminMenue = () => {
         )}
 
       </div>
+
+      {deleteModal.show && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gradient-to-b from-[#2a170a] to-[#180e0a] border border-amber-600/50 rounded-3xl p-6 md:p-8 max-w-sm w-full shadow-2xl text-center space-y-5 animate-in fade-in zoom-in duration-200">
+            <div className="w-14 h-14 bg-red-950/80 border border-red-500/40 rounded-full flex items-center justify-center mx-auto text-red-400 text-2xl shadow-inner">
+              🗑️
+            </div>
+
+            <div>
+              <h3 className="text-lg font-black text-amber-50">Delete Menu Item?</h3>
+              <p className="text-xs text-amber-200/70 mt-2 leading-relaxed">
+                Are you sure you want to remove <span className="text-amber-400 font-bold">"{deleteModal.name}"</span> from the catalog? This action cannot be undone.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteModal({ show: false, id: null, name: "" })}
+                className="flex-1 py-2.5 rounded-xl border border-amber-600/30 text-amber-200/80 hover:text-white text-xs font-bold transition cursor-pointer bg-amber-950/40"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={executeDelete}
+                className="flex-1 py-2.5 rounded-xl bg-red-700 hover:bg-red-600 text-white text-xs font-bold transition cursor-pointer shadow-lg shadow-red-900/40"
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
