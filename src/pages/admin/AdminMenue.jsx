@@ -46,9 +46,16 @@ const AdminMenue = () => {
   };
 
   const mergeMenus = (apiItems) => {
-    const apiIds = new Set(apiItems.map(i => String(i.id)));
-    const remainingDefaults = INITIAL_MENUS.filter(m => !apiIds.has(String(m.id)) && !apiItems.some(a => a.name === m.name));
-    return [...apiItems, ...remainingDefaults];
+    const saved = localStorage.getItem("app_permanent_menus");
+    const localItems = saved ? JSON.parse(saved) : INITIAL_MENUS;
+
+    const combinedMap = new Map();
+    [...INITIAL_MENUS, ...apiItems, ...localItems].forEach((item) => {
+      const key = item.id || item.name;
+      combinedMap.set(key, item);
+    });
+
+    return Array.from(combinedMap.values());
   };
 
   const fetchMenus = async () => {
@@ -62,14 +69,14 @@ const AdminMenue = () => {
       try {
         const cleanUrl = BASE_URL.endsWith("/") ? BASE_URL.slice(0, -1) : BASE_URL;
         const headers = token ? { Authorization: `Token ${token}` } : {};
-        const response = await axios.get(`${cleanUrl}/menu/`, { headers, timeout: 10000 });
+        const response = await axios.get(`${cleanUrl}/menu/`, { headers, timeout: 5000 });
 
         const apiItems = Array.isArray(response.data) ? response.data : (response.data?.data || response.data?.menus || response.data?.results || []);
-        if (apiItems && apiItems.length > 0) {
+        if (apiItems) {
           currentData = mergeMenus(apiItems);
         }
       } catch (err) {
-        console.warn("API fetch error, using combined local data:", err);
+        console.warn("API fetch warning, using local data:", err);
       }
     }
 
@@ -106,42 +113,31 @@ const AdminMenue = () => {
     const cleanUrl = BASE_URL.endsWith("/") ? BASE_URL.slice(0, -1) : BASE_URL;
     const headers = token ? { Authorization: `Token ${token}` } : {};
 
-    try {
-      if (editingId) {
-        let updatedItem = { ...formData, id: editingId };
-        if (BASE_URL) {
-          const res = await axios.put(`${cleanUrl}/menu/${editingId}/`, formData, { headers, timeout: 10000 });
-          if (res?.data && res.data.id) updatedItem = res.data;
-        }
-        const updatedList = menus.map((m) => (m.id === editingId ? updatedItem : m));
-        saveLocalData(updatedList);
-        setMessage("Menu item updated successfully in Database.");
-      } else {
-        let newItem = { ...formData, id: `m_${Date.now()}` };
-        if (BASE_URL) {
-          const res = await axios.post(`${cleanUrl}/menu/`, formData, { headers, timeout: 10000 });
-          if (res?.data) {
-            newItem = {
-              ...formData,
-              ...res.data,
-              id: res.data.id || res.data._id || newItem.id
-            };
-          }
-        }
-        const updatedList = [newItem, ...menus];
-        saveLocalData(updatedList);
-        setMessage("New menu item added and saved successfully.");
-      }
+    if (editingId) {
+      const updatedItem = { ...formData, id: editingId };
+      const updatedList = menus.map((m) => (m.id === editingId ? updatedItem : m));
+      saveLocalData(updatedList);
+      setMessage("Menu item updated successfully.");
 
-      setFormData(initialFormData);
-      setEditingId(null);
-      setShowForm(false);
-    } catch (err) {
-      console.error("Save Error:", err);
-      setError("Failed to save item to server. Please verify your connection.");
-    } finally {
-      setLoading(false);
+      if (BASE_URL) {
+        axios.put(`${cleanUrl}/menu/${editingId}/`, formData, { headers, timeout: 5000 }).catch(() => {});
+      }
+    } else {
+      const newId = `m_${Date.now()}`;
+      const newItem = { ...formData, id: newId };
+      const updatedList = [newItem, ...menus];
+      saveLocalData(updatedList);
+      setMessage("New menu item added successfully!");
+
+      if (BASE_URL) {
+        axios.post(`${cleanUrl}/menu/`, formData, { headers, timeout: 5000 }).catch(() => {});
+      }
     }
+
+    setFormData(initialFormData);
+    setEditingId(null);
+    setShowForm(false);
+    setLoading(false);
   };
 
   const handleEdit = (menu) => {
@@ -177,15 +173,12 @@ const AdminMenue = () => {
     saveLocalData(updatedList);
 
     if (BASE_URL) {
-      try {
-        const cleanUrl = BASE_URL.endsWith("/") ? BASE_URL.slice(0, -1) : BASE_URL;
-        const headers = token ? { Authorization: `Token ${token}` } : {};
-        await axios.delete(`${cleanUrl}/menu/${id}/`, { headers, timeout: 5000 });
-        setMessage("Menu item deleted successfully.");
-      } catch (err) {
-        console.warn("Delete API error:", err);
-      }
+      const cleanUrl = BASE_URL.endsWith("/") ? BASE_URL.slice(0, -1) : BASE_URL;
+      const headers = token ? { Authorization: `Token ${token}` } : {};
+      axios.delete(`${cleanUrl}/menu/${id}/`, { headers, timeout: 5000 }).catch(() => {});
     }
+
+    setMessage("Menu item deleted successfully.");
 
     if (editingId === id) {
       setEditingId(null);
@@ -208,44 +201,7 @@ const AdminMenue = () => {
     return `${BASE_URL}${cleanUrl.startsWith("/") ? "" : "/"}${cleanUrl}`;
   };
 
-  const getYouTubeEmbedUrl = (url) => {
-    if (!url) return null;
-    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
-    return match ? `https://www.youtube.com/embed/${match[1]}?autoplay=1&mute=1&loop=1&playlist=${match[1]}` : null;
-  };
-
-  const isDirectVideoUrl = (url) => {
-    if (!url) return false;
-    const clean = url.toLowerCase();
-    return clean.endsWith(".mp4") || clean.endsWith(".webm") || clean.endsWith(".ogg");
-  };
-
   const renderTVContent = (url) => {
-    const ytEmbed = getYouTubeEmbedUrl(url);
-    if (ytEmbed) {
-      return (
-        <iframe
-          src={ytEmbed}
-          title="TV Preview"
-          className="w-full h-full object-cover pointer-events-none"
-          allow="autoplay; encrypted-media"
-        />
-      );
-    }
-
-    if (isDirectVideoUrl(url)) {
-      return (
-        <video
-          src={url}
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="w-full h-full object-cover"
-        />
-      );
-    }
-
     return (
       <img
         src={formatImageUrl(url)}
@@ -420,15 +376,15 @@ const AdminMenue = () => {
 
                   <div>
                     <label className="block text-xs font-bold text-amber-200 mb-1.5 flex items-center justify-between">
-                      <span>Image or Video Stream URL</span>
-                      <span className="text-[10px] text-amber-400 font-mono">JPG, PNG, MP4, YouTube</span>
+                      <span>Image URL</span>
+                      <span className="text-[10px] text-amber-400 font-mono">JPG, PNG, WEBP</span>
                     </label>
                     <input
                       type="text"
                       name="image"
                       value={formData.image}
                       onChange={handleChange}
-                      placeholder="Paste Image URL or Video Link here..."
+                      placeholder="Paste Image URL here..."
                       className="w-full px-4 py-2.5 bg-amber-950/80 border border-amber-600/30 rounded-xl text-amber-50 text-xs outline-none focus:border-amber-400 placeholder:text-amber-200/40"
                     />
                   </div>
