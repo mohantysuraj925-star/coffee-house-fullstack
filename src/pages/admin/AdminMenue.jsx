@@ -62,9 +62,9 @@ const AdminMenue = () => {
       try {
         const cleanUrl = BASE_URL.endsWith("/") ? BASE_URL.slice(0, -1) : BASE_URL;
         const headers = token ? { Authorization: `Token ${token}` } : {};
-        const response = await axios.get(`${cleanUrl}/menu/`, { headers, timeout: 3000 });
+        const response = await axios.get(`${cleanUrl}/menu/`, { headers, timeout: 10000 });
 
-        const apiItems = Array.isArray(response.data) ? response.data : (response.data?.data || response.data?.menus || []);
+        const apiItems = Array.isArray(response.data) ? response.data : (response.data?.data || response.data?.menus || response.data?.results || []);
         if (apiItems && apiItems.length > 0) {
           currentData = mergeMenus(apiItems);
         }
@@ -103,35 +103,45 @@ const AdminMenue = () => {
     setError("");
     setMessage("");
 
-    let updatedList = [];
-    if (editingId) {
-      updatedList = menus.map((m) => (m.id === editingId ? { ...formData, id: editingId } : m));
-      setMessage("Menu item updated successfully.");
-    } else {
-      const newId = `m_${Date.now()}`;
-      const newItem = { ...formData, id: newId };
-      updatedList = [newItem, ...menus];
-      setMessage("New menu item added successfully.");
-    }
+    const cleanUrl = BASE_URL.endsWith("/") ? BASE_URL.slice(0, -1) : BASE_URL;
+    const headers = token ? { Authorization: `Token ${token}` } : {};
 
-    saveLocalData(updatedList);
-
-    if (BASE_URL) {
-      try {
-        const cleanUrl = BASE_URL.endsWith("/") ? BASE_URL.slice(0, -1) : BASE_URL;
-        const headers = token ? { Authorization: `Token ${token}` } : {};
-        if (editingId) {
-          await axios.put(`${cleanUrl}/menu-detail/${editingId}/`, formData, { headers, timeout: 2500 });
-        } else {
-          await axios.post(`${cleanUrl}/menu/`, formData, { headers, timeout: 2500 });
+    try {
+      if (editingId) {
+        let updatedItem = { ...formData, id: editingId };
+        if (BASE_URL) {
+          const res = await axios.put(`${cleanUrl}/menu/${editingId}/`, formData, { headers, timeout: 10000 });
+          if (res?.data && res.data.id) updatedItem = res.data;
         }
-      } catch (err) {}
-    }
+        const updatedList = menus.map((m) => (m.id === editingId ? updatedItem : m));
+        saveLocalData(updatedList);
+        setMessage("Menu item updated successfully in Database.");
+      } else {
+        let newItem = { ...formData, id: `m_${Date.now()}` };
+        if (BASE_URL) {
+          const res = await axios.post(`${cleanUrl}/menu/`, formData, { headers, timeout: 10000 });
+          if (res?.data) {
+            newItem = {
+              ...formData,
+              ...res.data,
+              id: res.data.id || res.data._id || newItem.id
+            };
+          }
+        }
+        const updatedList = [newItem, ...menus];
+        saveLocalData(updatedList);
+        setMessage("New menu item added and saved successfully.");
+      }
 
-    setFormData(initialFormData);
-    setEditingId(null);
-    setShowForm(false);
-    setLoading(false);
+      setFormData(initialFormData);
+      setEditingId(null);
+      setShowForm(false);
+    } catch (err) {
+      console.error("Save Error:", err);
+      setError("Failed to save item to server. Please verify your connection.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleEdit = (menu) => {
@@ -165,14 +175,16 @@ const AdminMenue = () => {
 
     const updatedList = menus.filter((menu) => menu.id !== id);
     saveLocalData(updatedList);
-    setMessage("Menu item deleted successfully.");
 
     if (BASE_URL) {
       try {
         const cleanUrl = BASE_URL.endsWith("/") ? BASE_URL.slice(0, -1) : BASE_URL;
         const headers = token ? { Authorization: `Token ${token}` } : {};
-        await axios.delete(`${cleanUrl}/menu-detail/${id}/`, { headers, timeout: 2000 });
-      } catch (err) {}
+        await axios.delete(`${cleanUrl}/menu/${id}/`, { headers, timeout: 5000 });
+        setMessage("Menu item deleted successfully.");
+      } catch (err) {
+        console.warn("Delete API error:", err);
+      }
     }
 
     if (editingId === id) {
@@ -282,8 +294,7 @@ const AdminMenue = () => {
               onClick={handleAddMenu}
               className="bg-amber-600 hover:bg-amber-500 text-white px-6 py-3 rounded-xl font-bold text-xs cursor-pointer transition flex items-center justify-center gap-2 shadow-lg shadow-amber-600/30"
             >
-              <span className="text-lg">+</span>
-              Add New Dish / Drink
+              <span className="text-lg">+</span> Add New Dish / Drink
             </button>
           </div>
         </div>
@@ -451,10 +462,7 @@ const AdminMenue = () => {
                   </div>
                 </div>
 
-                {/* 📺 Retro Compact Old-School TV Frame */}
                 <div className="flex flex-col items-center justify-center bg-amber-950/80 border border-amber-600/40 rounded-2xl p-4 w-full max-w-[260px] mx-auto shadow-2xl">
-                  
-                  {/* Antenna */}
                   <div className="flex items-center justify-center gap-4 -mb-1 z-10">
                     <div className="w-12 h-1 bg-amber-700 -rotate-45 origin-right rounded-full" />
                     <div className="w-12 h-1 bg-amber-700 rotate-45 origin-left rounded-full" />
@@ -467,18 +475,12 @@ const AdminMenue = () => {
                     <span className="text-[9px] text-amber-200/60 font-mono">CH-01</span>
                   </div>
 
-                  {/* Wooden/Plastic TV Body */}
                   <div className="w-full bg-[#2a170a] border-4 border-amber-900 rounded-2xl p-2.5 shadow-2xl relative">
-                    
-                    {/* TV Screen Glass Frame */}
                     <div className="w-full h-56 bg-black rounded-xl border-2 border-amber-950 overflow-hidden relative flex items-center justify-center shadow-inner">
                       {renderTVContent(formData.image)}
-
-                      {/* Glass Glare Layer */}
                       <div className="absolute inset-0 bg-gradient-to-tr from-white/10 via-transparent to-transparent pointer-events-none" />
                     </div>
 
-                    {/* TV Speaker Grille & Knobs */}
                     <div className="flex items-center justify-between mt-2 pt-1 border-t border-amber-900/60 px-1">
                       <div className="flex gap-1">
                         <div className="w-2.5 h-2.5 rounded-full bg-amber-800 border border-amber-600/50 shadow" />
@@ -492,7 +494,6 @@ const AdminMenue = () => {
                     </div>
                   </div>
 
-                  {/* TV Stand Legs */}
                   <div className="flex justify-between w-36 -mt-0.5">
                     <div className="w-2 h-3 bg-amber-900 -rotate-12 rounded-b" />
                     <div className="w-2 h-3 bg-amber-900 rotate-12 rounded-b" />
