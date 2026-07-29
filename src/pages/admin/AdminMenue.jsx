@@ -21,7 +21,7 @@ const AdminMenue = () => {
   const initialFormData = {
     name: "",
     category: "Coffee",
-    type: "veg", // 'veg' or 'nonveg'
+    type: "veg",
     description: "",
     price: "",
     image: "",
@@ -196,6 +196,57 @@ const AdminMenue = () => {
     return `${BASE_URL}${cleanUrl.startsWith("/") ? "" : "/"}${cleanUrl}`;
   };
 
+  const getYouTubeEmbedUrl = (url) => {
+    if (!url) return null;
+    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
+    return match ? `https://www.youtube.com/embed/${match[1]}?autoplay=1&mute=1&loop=1&playlist=${match[1]}` : null;
+  };
+
+  const isDirectVideoUrl = (url) => {
+    if (!url) return false;
+    const clean = url.toLowerCase();
+    return clean.endsWith(".mp4") || clean.endsWith(".webm") || clean.endsWith(".ogg");
+  };
+
+  const renderTVContent = (url) => {
+    const ytEmbed = getYouTubeEmbedUrl(url);
+    if (ytEmbed) {
+      return (
+        <iframe
+          src={ytEmbed}
+          title="TV Preview"
+          className="w-full h-full object-cover pointer-events-none"
+          allow="autoplay; encrypted-media"
+        />
+      );
+    }
+
+    if (isDirectVideoUrl(url)) {
+      return (
+        <video
+          src={url}
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="w-full h-full object-cover"
+        />
+      );
+    }
+
+    return (
+      <img
+        src={formatImageUrl(url)}
+        alt="TV Preview"
+        className="w-full h-full object-cover"
+        onError={(e) => {
+          e.target.onerror = null;
+          e.target.src = DEFAULT_PLACEHOLDER;
+        }}
+      />
+    );
+  };
+
   const filteredMenus = menus.filter((m) => {
     const matchesCategory = selectedCategory === "All" || m.category === selectedCategory;
     const matchesSearch = (m.name || "").toLowerCase().includes(searchQuery.toLowerCase());
@@ -205,8 +256,7 @@ const AdminMenue = () => {
   return (
     <div className="min-h-screen bg-[#1a0f07] text-amber-50 p-6 md:p-10">
       <div className="max-w-7xl mx-auto space-y-6">
-        
-        {/* Navigation & Header */}
+
         <div>
           <button
             onClick={() => navigate("/admin/dashboard")}
@@ -224,7 +274,7 @@ const AdminMenue = () => {
                 Menu Management
               </h1>
               <p className="text-amber-200/70 text-xs md:text-sm mt-1">
-                Add new dishes, set Veg/Non-Veg tags, update pricing & inventory live.
+                Add new dishes, set Veg/Non-Veg tags, live TV media preview & pricing.
               </p>
             </div>
 
@@ -250,7 +300,6 @@ const AdminMenue = () => {
           </div>
         )}
 
-        {/* Add/Edit Form Drawer */}
         {showForm && (
           <div className="bg-gradient-to-b from-amber-950/90 to-amber-900/50 border border-amber-600/40 rounded-3xl p-6 md:p-8 shadow-2xl space-y-6">
             <div className="flex items-center justify-between border-b border-amber-600/30 pb-4">
@@ -259,7 +308,7 @@ const AdminMenue = () => {
                   {editingId ? "Update Item Details" : "Create New Menu Item"}
                 </h2>
                 <p className="text-xs text-amber-200/60 mt-1">
-                  Fill in dish info, select dietary classification and live price.
+                  Fill in dish info, media link, live TV preview & pricing.
                 </p>
               </div>
 
@@ -273,136 +322,183 @@ const AdminMenue = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                
-                {/* Item Name */}
-                <div>
-                  <label className="block text-xs font-bold text-amber-200 mb-2">
-                    Dish / Drink Name
-                  </label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    placeholder="e.g. Cheese Burst Pizza / Caramel Latte"
-                    required
-                    className="w-full px-4 py-2.5 bg-amber-950/80 border border-amber-600/30 rounded-xl text-amber-50 text-xs outline-none focus:border-amber-400 placeholder:text-amber-200/40"
-                  />
-                </div>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
-                {/* Category */}
-                <div>
-                  <label className="block text-xs font-bold text-amber-200 mb-2">
-                    Category
-                  </label>
-                  <select
-                    name="category"
-                    value={formData.category}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-2.5 bg-amber-950/80 border border-amber-600/30 rounded-xl text-amber-50 text-xs outline-none focus:border-amber-400 cursor-pointer"
-                  >
-                    <option value="Coffee" className="bg-[#180E0A]">☕ Coffee</option>
-                    <option value="Tea" className="bg-[#180E0A]">🍵 Tea & Blends</option>
-                    <option value="Pizza" className="bg-[#180E0A]">🍕 Pizza</option>
-                    <option value="Burger" className="bg-[#180E0A]">🍔 Burger</option>
-                    <option value="Snack" className="bg-[#180E0A]">🍟 Snacks & Fries</option>
-                    <option value="Ice-Cream" className="bg-[#180E0A]">🍨 Ice Creams</option>
-                    <option value="Dessert" className="bg-[#180E0A]">🍰 Pastries & Desserts</option>
-                    <option value="Other" className="bg-[#180E0A]">🍽️ Other Items</option>
-                  </select>
-                </div>
+                <div className="lg:col-span-2 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-amber-200 mb-1.5">
+                        Dish / Drink Name
+                      </label>
+                      <input
+                        type="text"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleChange}
+                        placeholder="e.g. Cheese Burst Pizza / Caramel Latte"
+                        required
+                        className="w-full px-4 py-2.5 bg-amber-950/80 border border-amber-600/30 rounded-xl text-amber-50 text-xs outline-none focus:border-amber-400 placeholder:text-amber-200/40"
+                      />
+                    </div>
 
-                {/* Dietary Type Selector (Veg / Non-Veg) */}
-                <div>
-                  <label className="block text-xs font-bold text-amber-200 mb-2">
-                    Dietary Classification
-                  </label>
-                  <div className="flex bg-amber-950/80 border border-amber-600/30 rounded-xl p-1">
-                    <button
-                      type="button"
-                      onClick={() => setFormData(p => ({ ...p, type: "veg" }))}
-                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                        formData.type === "veg" ? "bg-green-700 text-white" : "text-amber-200/60 hover:text-white"
-                      }`}
-                    >
-                      🌱 Pure Veg
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFormData(p => ({ ...p, type: "nonveg" }))}
-                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                        formData.type === "nonveg" ? "bg-red-700 text-white" : "text-amber-200/60 hover:text-white"
-                      }`}
-                    >
-                      🍗 Non-Veg
-                    </button>
+                    <div>
+                      <label className="block text-xs font-bold text-amber-200 mb-1.5">
+                        Category
+                      </label>
+                      <select
+                        name="category"
+                        value={formData.category}
+                        onChange={handleChange}
+                        required
+                        className="w-full px-4 py-2.5 bg-amber-950/80 border border-amber-600/30 rounded-xl text-amber-50 text-xs outline-none focus:border-amber-400 cursor-pointer"
+                      >
+                        <option value="Coffee" className="bg-[#180E0A]">☕ Coffee</option>
+                        <option value="Tea" className="bg-[#180E0A]">🍵 Tea & Blends</option>
+                        <option value="Pizza" className="bg-[#180E0A]">🍕 Pizza</option>
+                        <option value="Burger" className="bg-[#180E0A]">🍔 Burger</option>
+                        <option value="Snack" className="bg-[#180E0A]">🍟 Snacks & Fries</option>
+                        <option value="Ice-Cream" className="bg-[#180E0A]">🍨 Ice Creams</option>
+                        <option value="Dessert" className="bg-[#180E0A]">🍰 Pastries & Desserts</option>
+                        <option value="Other" className="bg-[#180E0A]">🍽️ Other Items</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-amber-200 mb-1.5">
+                        Dietary Classification
+                      </label>
+                      <div className="flex bg-amber-950/80 border border-amber-600/30 rounded-xl p-1">
+                        <button
+                          type="button"
+                          onClick={() => setFormData(p => ({ ...p, type: "veg" }))}
+                          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                            formData.type === "veg" ? "bg-green-700 text-white" : "text-amber-200/60 hover:text-white"
+                          }`}
+                        >
+                          🌱 Pure Veg
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormData(p => ({ ...p, type: "nonveg" }))}
+                          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                            formData.type === "nonveg" ? "bg-red-700 text-white" : "text-amber-200/60 hover:text-white"
+                          }`}
+                        >
+                          🍗 Non-Veg
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-amber-200 mb-1.5">
+                        Price (₹)
+                      </label>
+                      <input
+                        type="number"
+                        name="price"
+                        value={formData.price}
+                        onChange={handleChange}
+                        placeholder="e.g. 180"
+                        min="0"
+                        step="0.01"
+                        required
+                        className="w-full px-4 py-2.5 bg-amber-950/80 border border-amber-600/30 rounded-xl text-amber-50 text-xs outline-none focus:border-amber-400 placeholder:text-amber-200/40"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-amber-200 mb-1.5 flex items-center justify-between">
+                      <span>Image or Video Stream URL</span>
+                      <span className="text-[10px] text-amber-400 font-mono">JPG, PNG, MP4, YouTube</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="image"
+                      value={formData.image}
+                      onChange={handleChange}
+                      placeholder="Paste Image URL or Video Link here..."
+                      className="w-full px-4 py-2.5 bg-amber-950/80 border border-amber-600/30 rounded-xl text-amber-50 text-xs outline-none focus:border-amber-400 placeholder:text-amber-200/40"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-amber-200 mb-1.5">
+                      Description
+                    </label>
+                    <textarea
+                      name="description"
+                      value={formData.description}
+                      onChange={handleChange}
+                      placeholder="Describe flavor profile, ingredients..."
+                      rows="2"
+                      className="w-full px-4 py-2.5 bg-amber-950/80 border border-amber-600/30 rounded-xl text-amber-50 text-xs outline-none focus:border-amber-400 placeholder:text-amber-200/40 resize-none"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="is_available"
+                      name="is_available"
+                      checked={formData.is_available}
+                      onChange={handleChange}
+                      className="w-4 h-4 accent-amber-500 cursor-pointer"
+                    />
+                    <label htmlFor="is_available" className="text-amber-50 text-xs font-bold cursor-pointer">
+                      Available for Live Orders
+                    </label>
                   </div>
                 </div>
 
-                {/* Price */}
-                <div>
-                  <label className="block text-xs font-bold text-amber-200 mb-2">
-                    Price (₹)
-                  </label>
-                  <input
-                    type="number"
-                    name="price"
-                    value={formData.price}
-                    onChange={handleChange}
-                    placeholder="e.g. 180"
-                    min="0"
-                    step="0.01"
-                    required
-                    className="w-full px-4 py-2.5 bg-amber-950/80 border border-amber-600/30 rounded-xl text-amber-50 text-xs outline-none focus:border-amber-400 placeholder:text-amber-200/40"
-                  />
+                {/* 📺 Retro Compact Old-School TV Frame */}
+                <div className="flex flex-col items-center justify-center bg-amber-950/80 border border-amber-600/40 rounded-2xl p-4 w-full max-w-[260px] mx-auto shadow-2xl">
+                  
+                  {/* Antenna */}
+                  <div className="flex items-center justify-center gap-4 -mb-1 z-10">
+                    <div className="w-12 h-1 bg-amber-700 -rotate-45 origin-right rounded-full" />
+                    <div className="w-12 h-1 bg-amber-700 rotate-45 origin-left rounded-full" />
+                  </div>
+
+                  <div className="w-full flex items-center justify-between mb-1.5 px-1">
+                    <span className="text-[10px] font-extrabold text-amber-400 uppercase tracking-widest flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" /> RETRO TV
+                    </span>
+                    <span className="text-[9px] text-amber-200/60 font-mono">CH-01</span>
+                  </div>
+
+                  {/* Wooden/Plastic TV Body */}
+                  <div className="w-full bg-[#2a170a] border-4 border-amber-900 rounded-2xl p-2.5 shadow-2xl relative">
+                    
+                    {/* TV Screen Glass Frame */}
+                    <div className="w-full h-56 bg-black rounded-xl border-2 border-amber-950 overflow-hidden relative flex items-center justify-center shadow-inner">
+                      {renderTVContent(formData.image)}
+
+                      {/* Glass Glare Layer */}
+                      <div className="absolute inset-0 bg-gradient-to-tr from-white/10 via-transparent to-transparent pointer-events-none" />
+                    </div>
+
+                    {/* TV Speaker Grille & Knobs */}
+                    <div className="flex items-center justify-between mt-2 pt-1 border-t border-amber-900/60 px-1">
+                      <div className="flex gap-1">
+                        <div className="w-2.5 h-2.5 rounded-full bg-amber-800 border border-amber-600/50 shadow" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-amber-800 border border-amber-600/50 shadow" />
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-4 h-1 bg-amber-800/80 rounded" />
+                        <div className="w-4 h-1 bg-amber-800/80 rounded" />
+                        <div className="w-4 h-1 bg-amber-800/80 rounded" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* TV Stand Legs */}
+                  <div className="flex justify-between w-36 -mt-0.5">
+                    <div className="w-2 h-3 bg-amber-900 -rotate-12 rounded-b" />
+                    <div className="w-2 h-3 bg-amber-900 rotate-12 rounded-b" />
+                  </div>
                 </div>
 
-                {/* Image URL */}
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-bold text-amber-200 mb-2">
-                    Image URL
-                  </label>
-                  <input
-                    type="text"
-                    name="image"
-                    value={formData.image}
-                    onChange={handleChange}
-                    placeholder="https://images.unsplash.com/your-image.jpg"
-                    className="w-full px-4 py-2.5 bg-amber-950/80 border border-amber-600/30 rounded-xl text-amber-50 text-xs outline-none focus:border-amber-400 placeholder:text-amber-200/40"
-                  />
-                </div>
-
-                {/* Description */}
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-bold text-amber-200 mb-2">
-                    Description
-                  </label>
-                  <textarea
-                    name="description"
-                    value={formData.description}
-                    onChange={handleChange}
-                    placeholder="Describe flavor profile, ingredients, or serving size..."
-                    rows="2"
-                    className="w-full px-4 py-2.5 bg-amber-950/80 border border-amber-600/30 rounded-xl text-amber-50 text-xs outline-none focus:border-amber-400 placeholder:text-amber-200/40 resize-none"
-                  />
-                </div>
-
-                {/* Availability Checkbox */}
-                <div className="md:col-span-2 flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="is_available"
-                    name="is_available"
-                    checked={formData.is_available}
-                    onChange={handleChange}
-                    className="w-4 h-4 accent-amber-500 cursor-pointer"
-                  />
-                  <label htmlFor="is_available" className="text-amber-50 text-xs font-bold cursor-pointer">
-                    Available for Live Orders
-                  </label>
-                </div>
               </div>
 
               <div className="flex justify-end gap-3 border-t border-amber-600/30 pt-4">
@@ -425,7 +521,6 @@ const AdminMenue = () => {
           </div>
         )}
 
-        {/* Filter & Search Bar */}
         <div className="bg-gradient-to-b from-amber-950/80 to-amber-900/40 border border-amber-600/30 p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4">
           <input
             type="text"
@@ -450,7 +545,6 @@ const AdminMenue = () => {
           </div>
         </div>
 
-        {/* Items Grid */}
         {fetching && menus.length === 0 ? (
           <div className="py-20 text-center space-y-3">
             <div className="w-10 h-10 border-4 border-amber-600/30 border-t-amber-400 rounded-full animate-spin mx-auto" />
@@ -468,19 +562,14 @@ const AdminMenue = () => {
                 className="group bg-gradient-to-b from-amber-950/60 to-amber-900/30 border border-amber-600/30 hover:border-amber-400/60 rounded-3xl overflow-hidden shadow-xl flex flex-col justify-between transition duration-300"
               >
                 <div>
-                  <div className="h-44 bg-amber-950 relative overflow-hidden">
-                    <img
-                      src={formatImageUrl(menu.image)}
-                      alt={menu.name}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <span className="absolute top-3 left-3 bg-amber-950/90 backdrop-blur-md text-amber-300 border border-amber-500/30 text-[9px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                  <div className="h-44 bg-[#0d0704] relative overflow-hidden flex items-center justify-center p-1">
+                    {renderTVContent(menu.image)}
+
+                    <span className="absolute top-3 left-3 bg-amber-950/90 backdrop-blur-md text-amber-300 border border-amber-500/30 text-[9px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider z-10">
                       {menu.category}
                     </span>
 
-                    {/* Veg / Non-Veg Badge */}
-                    <span className={`absolute top-3 right-3 px-2.5 py-0.5 rounded-full text-[9px] font-bold border backdrop-blur-md uppercase tracking-wider ${
+                    <span className={`absolute top-3 right-3 px-2.5 py-0.5 rounded-full text-[9px] font-bold border backdrop-blur-md uppercase tracking-wider z-10 ${
                       menu.type === "nonveg" || menu.is_veg === false
                         ? "bg-red-950/90 text-red-400 border-red-500/40"
                         : "bg-green-950/90 text-green-400 border-green-500/40"

@@ -5,9 +5,17 @@ import { useNavigate } from "react-router-dom";
 const API_BASE_URL = "https://coffeehouse-backend-xtle.onrender.com";
 
 const Menu = () => {
-  const [menus, setMenus] = useState([]);
+  const [menus, setMenus] = useState(() => {
+    try {
+      const cached = localStorage.getItem("app_permanent_menus");
+      return cached ? JSON.parse(cached) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
   const [cartQuantities, setCartQuantities] = useState({});
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(menus.length === 0);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOrder, setSortOrder] = useState("default");
@@ -32,7 +40,6 @@ const Menu = () => {
   };
 
   useEffect(() => {
-    setLoading(true);
     const fetchMenuData = async () => {
       try {
         let res = await axios.get(`${API_BASE_URL}/api/menu/`).catch(() => null);
@@ -45,9 +52,19 @@ const Menu = () => {
           const items = Array.isArray(rawData)
             ? rawData
             : rawData.results || rawData.data || rawData.menus || [];
-          setMenus(items);
-        } else {
-          setMenus([]);
+
+          if (items.length > 0) {
+            setMenus((prev) => {
+              const map = new Map();
+              [...prev, ...items].forEach((item) => {
+                const id = item.id || item._id;
+                if (id) map.set(id, item);
+              });
+              const merged = Array.from(map.values());
+              localStorage.setItem("app_permanent_menus", JSON.stringify(merged));
+              return merged;
+            });
+          }
         }
       } catch (err) {
         console.error("Menu fetch error:", err);
@@ -92,6 +109,16 @@ const Menu = () => {
     return `${API_BASE_URL}${url.startsWith("/") ? "" : "/"}${url}`;
   };
 
+  const isVideoUrl = (url) => {
+    if (!url) return false;
+    return (
+      url.includes("youtube.com") ||
+      url.includes("youtu.be") ||
+      url.endsWith(".mp4") ||
+      url.endsWith(".webm")
+    );
+  };
+
   const categories = [
     "All",
     ...new Set(
@@ -112,7 +139,10 @@ const Menu = () => {
         .toLowerCase()
         .includes(searchQuery.toLowerCase());
 
-    const isItemNonVeg = m.is_veg === false || m.type === "nonveg" || (m.category && String(m.category).toLowerCase().includes("non"));
+    const isItemNonVeg =
+      m.is_veg === false ||
+      m.type === "nonveg" ||
+      (m.category && String(m.category).toLowerCase().includes("non"));
 
     let matchesType = true;
     if (foodType === "veg") {
@@ -135,12 +165,11 @@ const Menu = () => {
   const sortLabels = {
     default: "Sort: Featured",
     lowToHigh: "Price: Low to High",
-    highToLow: "Price: High to Low"
+    highToLow: "Price: High to Low",
   };
 
   return (
     <div className="bg-[#1a0f07] text-amber-50 min-h-screen overflow-x-hidden w-full">
-      {/* Header Banner */}
       <section className="relative py-8 md:py-10 border-b border-amber-600/30 bg-gradient-to-b from-[#120B07] via-[#1a0f07] to-amber-950/30 px-4">
         <div className="max-w-6xl mx-auto text-center space-y-3">
           <span className="inline-flex items-center gap-2 bg-amber-950/80 border border-amber-500/40 text-amber-300 px-3.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-md">
@@ -176,7 +205,6 @@ const Menu = () => {
         </div>
       </section>
 
-      {/* Main Section */}
       <section className="py-6 px-4 md:px-8 max-w-6xl mx-auto space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-amber-600/30 gap-4">
           <div>
@@ -185,7 +213,6 @@ const Menu = () => {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Filter Buttons with Dot Indicators */}
             <div className="flex items-center bg-amber-950/80 border border-amber-600/30 rounded-xl p-1 text-xs gap-1">
               <button
                 onClick={() => setFoodType("all")}
@@ -221,7 +248,6 @@ const Menu = () => {
               </button>
             </div>
 
-            {/* Dropdown */}
             <div className="relative">
               <button
                 onClick={() => setIsSortOpen(!isSortOpen)}
@@ -266,9 +292,6 @@ const Menu = () => {
                 onClick={() => navigate("/cart")}
                 className="flex items-center gap-1.5 bg-gradient-to-r from-amber-600 to-amber-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-md"
               >
-                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                </svg>
                 <span>Cart</span>
                 <span className="bg-amber-950 text-amber-300 px-2 py-0.5 rounded-full text-[10px] font-black">
                   {totalCartItems}
@@ -278,7 +301,6 @@ const Menu = () => {
           </div>
         </div>
 
-        {/* Categories */}
         {categories.length > 1 && (
           <div className="flex items-center gap-2 overflow-x-auto pb-2">
             {categories.map((cat) => (
@@ -297,7 +319,6 @@ const Menu = () => {
           </div>
         )}
 
-        {/* Menu Grid */}
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {[1, 2, 3, 4].map((idx) => (
@@ -315,7 +336,12 @@ const Menu = () => {
               const qty = cartQuantities[itemId] || 0;
               const categoryName = typeof menu.category === "object" ? menu.category?.name : menu.category;
               const itemName = menu.name || menu.title;
-              const isNonVeg = menu.is_veg === false || menu.type === "nonveg" || (menu.category && String(menu.category).toLowerCase().includes("non"));
+              const isNonVeg =
+                menu.is_veg === false ||
+                menu.type === "nonveg" ||
+                (menu.category && String(menu.category).toLowerCase().includes("non"));
+              const mediaUrl = formatImageUrl(menu.image || menu.item_image);
+              const isVid = isVideoUrl(mediaUrl);
 
               return (
                 <div
@@ -324,18 +350,27 @@ const Menu = () => {
                 >
                   <div>
                     <div className="relative h-36 w-full overflow-hidden bg-[#180E0A] shrink-0">
-                      <img
-                        src={formatImageUrl(menu.image || menu.item_image)}
-                        alt={itemName}
-                        loading="eager"
-                        decoding="async"
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                      
-                      {/* Show Red Non-Veg Badge ONLY if item is Non-Veg */}
+                      {isVid ? (
+                        <video
+                          src={mediaUrl}
+                          autoPlay
+                          loop
+                          muted
+                          playsInline
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <img
+                          src={mediaUrl}
+                          alt={itemName}
+                          loading="eager"
+                          decoding="async"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      )}
+
                       {isNonVeg && (
-                        <span className="absolute top-2 left-2 bg-red-950/90 text-red-300 border border-red-500/50 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase flex items-center gap-1">
+                        <span className="absolute top-2 left-2 bg-red-950/90 text-red-300 border border-red-500/50 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase flex items-center gap-1 z-10">
                           <span className="w-2 h-2 border border-red-500 flex items-center justify-center p-0.5 rounded-sm">
                             <span className="w-1 h-1 bg-red-500 rounded-full"></span>
                           </span>
@@ -344,7 +379,7 @@ const Menu = () => {
                       )}
 
                       {categoryName && !isNonVeg && (
-                        <span className="absolute top-2 left-2 bg-amber-950/90 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase">
+                        <span className="absolute top-2 left-2 bg-amber-950/90 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase z-10">
                           {categoryName}
                         </span>
                       )}

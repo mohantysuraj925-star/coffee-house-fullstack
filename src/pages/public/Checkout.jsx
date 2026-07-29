@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
+const VALID_COUPONS = ["CH2026", "COFFEE2026", "WELCOME2"];
+
 const Checkout = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
@@ -12,11 +14,16 @@ const Checkout = () => {
   const [cartItems, setCartItems] = useState([]);
   const [subTotal, setSubTotal] = useState(0);
 
+  const [couponInput, setCouponInput] = useState("");
+  const [couponDiscountPercent, setCouponDiscountPercent] = useState(0);
+  const [couponMsg, setCouponMsg] = useState("");
+  const [isRepeatUser, setIsRepeatUser] = useState(false);
+  const [generatedCoupon, setGeneratedCoupon] = useState("");
+
   const [tip, setTip] = useState(0);
   const [deliveryNote, setDeliveryNote] = useState("");
   const [copied, setCopied] = useState(false);
   const [timeLeft, setTimeLeft] = useState(600);
-
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -40,6 +47,16 @@ const Checkout = () => {
   };
 
   useEffect(() => {
+    const orderHistory = localStorage.getItem("app_order_history_count");
+    if (orderHistory && Number(orderHistory) > 0) {
+      setIsRepeatUser(true);
+    }
+
+    const savedSubtotal = localStorage.getItem("checkout_subtotal");
+    if (savedSubtotal) {
+      setSubTotal(Number(savedSubtotal));
+    }
+
     const fetchCartDetails = async () => {
       try {
         const baseUrl = ("https://coffeehouse-backend-xtle.onrender.com" || "https://coffeehouse-backend-xtle.onrender.com/api").replace(/\/+$/, "");
@@ -54,7 +71,7 @@ const Checkout = () => {
             0
           );
           setSubTotal(total);
-        } else {
+        } else if (!savedSubtotal) {
           setSubTotal(340);
           setCartItems([
             { id: 1, menu_name: "Signature Caramel Latte", quantity: 1, menu_price: 200 },
@@ -62,25 +79,42 @@ const Checkout = () => {
           ]);
         }
       } catch (err) {
-        setSubTotal(340);
-        setCartItems([
-          { id: 1, menu_name: "Signature Caramel Latte", quantity: 1, menu_price: 200 },
-          { id: 2, menu_name: "Artisanal Butter Croissant", quantity: 1, menu_price: 140 },
-        ]);
+        if (!savedSubtotal) {
+          setSubTotal(340);
+          setCartItems([
+            { id: 1, menu_name: "Signature Caramel Latte", quantity: 1, menu_price: 200 },
+            { id: 2, menu_name: "Artisanal Butter Croissant", quantity: 1, menu_price: 140 },
+          ]);
+        }
       }
     };
     fetchCartDetails();
   }, [token]);
 
-  const deliveryFee = subTotal > 0 ? 40 : 0;
-  const grandTotal = Math.max(0, subTotal + deliveryFee + tip);
+  const applyCoupon = (e) => {
+    e.preventDefault();
+    const clean = couponInput.trim().toUpperCase();
+    if (VALID_COUPONS.includes(clean)) {
+      setCouponDiscountPercent(2);
+      setCouponMsg("✓ Verified Coupon Code! 2% Extra Off Added.");
+    } else {
+      setCouponDiscountPercent(0);
+      setCouponMsg("✕ Invalid Code. Try: CH2026");
+    }
+  };
+
+  const repeatDiscountPercent = isRepeatUser ? 2 : 0;
+  const totalDiscountPercent = repeatDiscountPercent + couponDiscountPercent;
+
+  const discountAmount = (subTotal * totalDiscountPercent) / 100;
+  const gstFee = subTotal * 0.05;
+  const grandTotal = Math.max(0, subTotal - discountAmount + gstFee + tip);
 
   const upiPayString = `upi://pay?pa=Pushpanjali@upi&pn=Coffee%20House&am=${grandTotal.toFixed(2)}&cu=INR`;
   const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(upiPayString)}`;
 
   const handleChange = (e) => setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
-  // HARD & STRICT VALIDATION LOGIC
   const cleanName = formData.name.trim();
   const cleanPhone = formData.phone.trim();
   const cleanPincode = formData.pincode.trim();
@@ -125,7 +159,7 @@ const Checkout = () => {
 
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel();
-      const text = `${name} pay... Payment of rupees ${grandTotal} successful on Coffee House.`;
+      const text = `${name} pay... Payment of rupees ${grandTotal.toFixed(0)} successful on Coffee House.`;
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 0.88;
       utterance.pitch = 1.0;
@@ -138,10 +172,19 @@ const Checkout = () => {
     e.preventDefault();
     if (!isFormValid) return;
     setLoading(true);
+
+    const prevOrders = Number(localStorage.getItem("app_order_history_count") || "0");
+    localStorage.setItem("app_order_history_count", (prevOrders + 1).toString());
+
+    if (prevOrders === 0) {
+      setGeneratedCoupon("CH2026");
+    }
+
     setTimeout(() => {
       setLoading(false);
       setShowReceipt(true);
       triggerAudioAndVoice(cleanName);
+      localStorage.removeItem("app_cart_items");
     }, 1800);
   };
 
@@ -161,6 +204,15 @@ const Checkout = () => {
               <h2 className="text-3xl font-black text-white mt-3 tracking-tight">Payment Successful</h2>
               <p className="text-xs text-slate-400 mt-1 font-mono">{txnId}</p>
             </div>
+
+            {generatedCoupon && (
+              <div className="bg-amber-950/80 border border-amber-500/50 p-3 rounded-2xl text-center space-y-1">
+                <span className="text-[10px] text-amber-300 font-bold uppercase tracking-wider block">🎁 First Order Reward Code</span>
+                <p className="text-lg font-black text-amber-400 font-mono tracking-widest">{generatedCoupon}</p>
+                <p className="text-[10px] text-amber-200/60">Use this code on your next visit for 2% extra discount!</p>
+              </div>
+            )}
+
             <div className="bg-[#0B0604] p-5 rounded-2xl border border-[#2A1710] text-left text-xs space-y-3">
               <div className="flex justify-between text-slate-400"><span>Customer:</span><span className="text-white font-bold">{formData.name}</span></div>
               <div className="flex justify-between text-slate-400"><span>Contact:</span><span className="text-white font-bold">{formData.phone}</span></div>
@@ -172,6 +224,7 @@ const Checkout = () => {
           </div>
         </div>
       )}
+
       <div className="relative z-10 max-w-6xl mx-auto">
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2.5 px-4 py-1.5 bg-[#140C09] border border-[#2A1710] rounded-full text-[#F59E0B] text-xs font-black uppercase tracking-widest mb-4">
@@ -183,12 +236,14 @@ const Checkout = () => {
         <div className="grid lg:grid-cols-12 gap-8 items-start">
           <div className="lg:col-span-7 bg-[#110A07]/95 backdrop-blur-2xl border border-[#2A1710] rounded-[2.5rem] p-6 sm:p-10 shadow-2xl space-y-8">
             <form onSubmit={handlePayment} className="space-y-8">
+
+              {/* Shipping Form */}
               <div className="space-y-4">
                 <div className="flex items-center gap-3 pb-3 border-b border-[#2A1710]">
                   <span className="w-8 h-8 rounded-xl bg-[#D97706]/20 text-[#F59E0B] border border-[#F59E0B]/30 flex items-center justify-center font-black text-xs">1</span>
                   <h2 className="text-sm font-extrabold text-white uppercase tracking-wider">Shipping Details</h2>
                 </div>
-                
+
                 <div>
                   <label className="block text-[11px] font-bold text-slate-400 mb-1">FULL NAME *</label>
                   <input
@@ -272,11 +327,13 @@ const Checkout = () => {
                 </div>
               </div>
 
+              {/* Payment Methods */}
               <div className="space-y-4">
                 <div className="flex items-center gap-3 pb-3 border-b border-[#2A1710]">
                   <span className="w-8 h-8 rounded-xl bg-[#D97706]/20 text-[#F59E0B] border border-[#F59E0B]/30 flex items-center justify-center font-black text-xs">2</span>
                   <h2 className="text-sm font-extrabold text-white uppercase tracking-wider">Payment Method</h2>
                 </div>
+
                 <div className="grid grid-cols-3 gap-2">
                   <button type="button" onClick={() => setPaymentMethod("upi")} className={`p-3 rounded-2xl border text-[11px] font-extrabold cursor-pointer transition ${paymentMethod === "upi" ? "bg-[#D97706]/20 border-[#F59E0B] text-[#F59E0B]" : "bg-[#070403] border-[#2A1710] text-slate-400"}`}>📱 UPI QR</button>
                   <button type="button" onClick={() => setPaymentMethod("card")} className={`p-3 rounded-2xl border text-[11px] font-extrabold cursor-pointer transition ${paymentMethod === "card" ? "bg-[#D97706]/20 border-[#F59E0B] text-[#F59E0B]" : "bg-[#070403] border-[#2A1710] text-slate-400"}`}>💳 Card</button>
@@ -350,6 +407,7 @@ const Checkout = () => {
                 )}
               </div>
 
+              {/* Delivery Tip */}
               <div className="space-y-2">
                 <label className="block text-xs font-semibold text-slate-300">Add Delivery Partner Tip</label>
                 <div className="flex gap-2">
@@ -375,24 +433,98 @@ const Checkout = () => {
             </form>
           </div>
 
+          {/* Right Column - Coupon & Final Summary */}
           <div className="lg:col-span-5 space-y-6">
+
+            {/* Smart Coupon Box */}
+            <div className="bg-[#110A07]/95 border border-[#2A1710] rounded-[2.5rem] p-6 shadow-2xl space-y-4">
+              <h2 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                <span>🎟️</span> Apply Promo Coupon
+              </h2>
+              <form onSubmit={applyCoupon} className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Enter Code (e.g. CH2026)"
+                  value={couponInput}
+                  onChange={(e) => setCouponInput(e.target.value)}
+                  className="bg-[#070403] border border-[#2A1710] text-white px-3.5 py-2.5 rounded-xl text-xs flex-1 outline-none uppercase placeholder:text-slate-500"
+                />
+                <button
+                  type="submit"
+                  className="bg-[#D97706] hover:bg-[#F59E0B] text-white px-4 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer"
+                >
+                  Apply
+                </button>
+              </form>
+              {couponMsg && (
+                <p className={`text-[11px] font-bold ${couponDiscountPercent > 0 ? "text-emerald-400" : "text-amber-400"}`}>
+                  {couponMsg}
+                </p>
+              )}
+            </div>
+
+            {/* Order Summary */}
             <div className="bg-[#110A07]/95 border border-[#2A1710] rounded-[2.5rem] p-6 sm:p-8 space-y-6 shadow-2xl">
               <h2 className="text-lg font-black text-white pb-3 border-b border-[#2A1710]">Order Summary</h2>
-              <div className="space-y-3 max-h-56 overflow-y-auto">
-                {cartItems.map((item, idx) => (
-                  <div key={idx} className="flex justify-between items-center text-xs">
-                    <div><p className="font-bold text-white">{item.menu_name || item.name || "Coffee Item"}</p><p className="text-slate-400 text-[10px]">Qty: {item.quantity}</p></div>
-                    <p className="font-extrabold text-[#F59E0B]">₹{((item.menu_price || item.price || 0) * item.quantity).toFixed(2)}</p>
-                  </div>
-                ))}
-              </div>
+
+              {cartItems.length > 0 && (
+                <div className="space-y-3 max-h-48 overflow-y-auto">
+                  {cartItems.map((item, idx) => (
+                    <div key={idx} className="flex justify-between items-center text-xs">
+                      <div>
+                        <p className="font-bold text-white">{item.menu_name || item.name || "Coffee Item"}</p>
+                        <p className="text-slate-400 text-[10px]">Qty: {item.quantity}</p>
+                      </div>
+                      <p className="font-extrabold text-[#F59E0B]">₹{((item.menu_price || item.price || 0) * item.quantity).toFixed(2)}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <div className="border-t border-[#2A1710] pt-4 space-y-2 text-xs">
-                <div className="flex justify-between text-slate-400"><span>Subtotal</span><span>₹{subTotal.toFixed(2)}</span></div>
-                <div className="flex justify-between text-slate-400"><span>Delivery Charge</span><span>₹{deliveryFee.toFixed(2)}</span></div>
-                {tip > 0 && <div className="flex justify-between text-amber-400 font-bold"><span>Delivery Tip</span><span>+ ₹{tip.toFixed(2)}</span></div>}
-                <div className="border-t border-[#2A1710] pt-3 flex justify-between items-center font-black text-sm"><span className="text-white">Total Amount</span><span className="text-emerald-400 text-lg">₹{grandTotal.toFixed(2)}</span></div>
+                <div className="flex justify-between text-slate-400">
+                  <span>Subtotal</span>
+                  <span>₹{subTotal.toFixed(2)}</span>
+                </div>
+
+                {isRepeatUser && (
+                  <div className="flex justify-between text-emerald-400 font-bold">
+                    <span>Repeat User Loyalty (2%)</span>
+                    <span>- ₹{((subTotal * 2) / 100).toFixed(2)}</span>
+                  </div>
+                )}
+
+                {couponDiscountPercent > 0 && (
+                  <div className="flex justify-between text-emerald-400 font-bold">
+                    <span>Verified Coupon (2%)</span>
+                    <span>- ₹{((subTotal * 2) / 100).toFixed(2)}</span>
+                  </div>
+                )}
+
+                <div className="flex justify-between text-slate-400">
+                  <span>GST Taxes (5%)</span>
+                  <span>₹{gstFee.toFixed(2)}</span>
+                </div>
+
+                <div className="flex justify-between text-slate-400">
+                  <span>Delivery Charge</span>
+                  <span className="text-emerald-400 font-bold">FREE</span>
+                </div>
+
+                {tip > 0 && (
+                  <div className="flex justify-between text-amber-400 font-bold">
+                    <span>Delivery Tip</span>
+                    <span>+ ₹{tip.toFixed(2)}</span>
+                  </div>
+                )}
+
+                <div className="border-t border-[#2A1710] pt-3 flex justify-between items-center font-black text-sm">
+                  <span className="text-white">Total Amount</span>
+                  <span className="text-emerald-400 text-xl font-mono">₹{grandTotal.toFixed(2)}</span>
+                </div>
               </div>
             </div>
+
           </div>
         </div>
       </div>
