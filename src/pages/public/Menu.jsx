@@ -4,103 +4,77 @@ import { useNavigate } from "react-router-dom";
 
 const API_BASE_URL = "https://coffeehouse-backend-xtle.onrender.com";
 
+const INITIAL_FALLBACK_MENUS = [
+  { id: "m1", name: "Cappuccino", category: "Coffee", type: "veg", price: "122.50", description: "Rich espresso blended with velvety steamed milk and topped with a thick layer of silky foam.", image: "https://images.unsplash.com/photo-1534778101976-62847782c213", is_available: true },
+  { id: "m2", name: "French Fries", category: "Snack", type: "veg", price: "50.00", description: "Crispy golden french fries served hot and fresh, lightly seasoned to perfection.", image: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877", is_available: true },
+  { id: "m3", name: "Artisanal Espresso", category: "Coffee", type: "veg", price: "180.00", description: "Rich, bold double shot espresso crafted from roasted Arabica beans.", image: "https://images.unsplash.com/photo-1510591509098-f4fdc6d0ff04", is_available: true },
+  { id: "m4", name: "Nitro Cold Brew", category: "Coffee", type: "veg", price: "260.00", description: "Slow-steeped cold brew infused with nitrogen for a silky pour.", image: "https://images.unsplash.com/photo-1517701604599-bb29b565090c", is_available: true },
+  { id: "m5", name: "Butter Croissant", category: "Snack", type: "veg", price: "150.00", description: "Flaky, golden French croissant baked fresh every morning.", image: "https://images.unsplash.com/photo-1555507036-ab1f4038808a", is_available: true },
+  { id: "m6", name: "Dark Chocolate Muffin", category: "Dessert", type: "veg", price: "190.00", description: "Decadent dark chocolate muffin loaded with belgian chocolate chips.", image: "https://images.unsplash.com/photo-1607958996333-41aef7caefaa", is_available: true }
+];
+
 const Menu = () => {
   const [menus, setMenus] = useState(() => {
     try {
       const cached = localStorage.getItem("app_permanent_menus");
-      return cached ? JSON.parse(cached) : [];
-    } catch (e) {
-      return [];
+      const parsed = cached ? JSON.parse(cached) : [];
+      return parsed.length > 0 ? parsed : INITIAL_FALLBACK_MENUS;
+    } catch {
+      return INITIAL_FALLBACK_MENUS;
     }
   });
 
   const [cartQuantities, setCartQuantities] = useState({});
-  const [loading, setLoading] = useState(menus.length === 0);
+  const [loading, setLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOrder, setSortOrder] = useState("default");
   const [foodType, setFoodType] = useState("all");
-  const [isSortOpen, setIsSortOpen] = useState(false);
 
-  const token = localStorage.getItem("token");
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const savedCart = localStorage.getItem("app_cart_items");
-    if (savedCart) {
-      try {
-        setCartQuantities(JSON.parse(savedCart));
-      } catch (e) {}
-    }
-  }, []);
-
-  const saveCart = (newCart) => {
-    setCartQuantities(newCart);
-    localStorage.setItem("app_cart_items", JSON.stringify(newCart));
+  const loadCartFromStorage = () => {
+    try {
+      const savedCart = localStorage.getItem("app_cart_items");
+      if (savedCart) setCartQuantities(JSON.parse(savedCart));
+    } catch {}
   };
 
-  useEffect(() => {
-    const fetchMenuData = async () => {
-      try {
-        let res = await axios.get(`${API_BASE_URL}/api/menu/`).catch(() => null);
-        if (!res || !res.data) {
-          res = await axios.get(`${API_BASE_URL}/menu/`).catch(() => null);
-        }
-
-        if (res && res.data) {
-          const rawData = res.data;
-          const items = Array.isArray(rawData)
-            ? rawData
-            : rawData.results || rawData.data || rawData.menus || [];
-
-          if (items.length > 0) {
-            setMenus((prev) => {
-              const map = new Map();
-              [...prev, ...items].forEach((item) => {
-                const id = item.id || item._id;
-                if (id) map.set(id, item);
-              });
-              const merged = Array.from(map.values());
-              localStorage.setItem("app_permanent_menus", JSON.stringify(merged));
-              return merged;
-            });
-          }
-        }
-      } catch (err) {
-        console.error("Menu fetch error:", err);
-      } finally {
-        setLoading(false);
+  const fetchMenuFromApi = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const headers = token ? { Authorization: `Token ${token}` } : {};
+      const res = await axios.get(`${API_BASE_URL}/menu/`, { headers, timeout: 6000 });
+      const apiItems = Array.isArray(res.data) ? res.data : (res.data?.results || res.data?.data || []);
+      
+      if (apiItems && apiItems.length > 0) {
+        setMenus(apiItems);
+        localStorage.setItem("app_permanent_menus", JSON.stringify(apiItems));
       }
-    };
+    } catch (err) {
+      console.warn("API fetch delayed/failed, using cached menu:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchMenuData();
+  useEffect(() => {
+    loadCartFromStorage();
+    fetchMenuFromApi();
   }, []);
 
-  const handleAddToCart = (e, menuId) => {
-    e.preventDefault();
-    if (!token) {
-      navigate("/login");
-      return;
-    }
-    saveCart({ ...cartQuantities, [menuId]: 1 });
-  };
+  const updateQuantity = (menuId, delta) => {
+    setCartQuantities((prev) => {
+      const current = prev[menuId] || 0;
+      const next = Math.max(0, current + delta);
+      const updated = { ...prev };
+      if (next === 0) delete updated[menuId];
+      else updated[menuId] = next;
 
-  const handleIncrease = (e, menuId) => {
-    e.preventDefault();
-    const current = cartQuantities[menuId] || 1;
-    saveCart({ ...cartQuantities, [menuId]: current + 1 });
-  };
-
-  const handleDecrease = (e, menuId) => {
-    e.preventDefault();
-    const current = cartQuantities[menuId] || 1;
-    const updated = { ...cartQuantities };
-    if (current - 1 <= 0) {
-      delete updated[menuId];
-    } else {
-      updated[menuId] = current - 1;
-    }
-    saveCart(updated);
+      localStorage.setItem("app_cart_items", JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const formatImageUrl = (url) => {
@@ -109,337 +83,148 @@ const Menu = () => {
     return `${API_BASE_URL}${url.startsWith("/") ? "" : "/"}${url}`;
   };
 
-  const isVideoUrl = (url) => {
-    if (!url) return false;
-    return (
-      url.includes("youtube.com") ||
-      url.includes("youtu.be") ||
-      url.endsWith(".mp4") ||
-      url.endsWith(".webm")
-    );
-  };
-
-  const categories = [
-    "All",
-    ...new Set(
-      menus
-        .map((m) => (typeof m.category === "object" ? m.category?.name : m.category))
-        .filter(Boolean)
-    ),
-  ];
-
-  let filteredMenus = menus.filter((m) => {
-    const itemCat = typeof m.category === "object" ? m.category?.name : m.category;
-    const matchesCategory = selectedCategory === "All" || itemCat === selectedCategory;
-    const matchesSearch =
-      (m.name || m.title || "")
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase()) ||
-      (m.description || "")
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase());
-
-    const isItemNonVeg =
-      m.is_veg === false ||
-      m.type === "nonveg" ||
-      (m.category && String(m.category).toLowerCase().includes("non"));
-
-    let matchesType = true;
-    if (foodType === "veg") {
-      matchesType = !isItemNonVeg;
-    } else if (foodType === "nonveg") {
-      matchesType = isItemNonVeg;
-    }
-
-    return matchesCategory && matchesSearch && matchesType;
+  const filteredMenus = menus.filter((m) => {
+    const matchesCat = selectedCategory === "All" || m.category === selectedCategory;
+    const matchesSearch = (m.name || "").toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesType = foodType === "all" || (foodType === "veg" ? m.type === "veg" : m.type === "nonveg");
+    return matchesCat && matchesSearch && matchesType;
   });
 
-  if (sortOrder === "lowToHigh") {
-    filteredMenus = [...filteredMenus].sort((a, b) => Number(a.price) - Number(b.price));
-  } else if (sortOrder === "highToLow") {
-    filteredMenus = [...filteredMenus].sort((a, b) => Number(b.price) - Number(a.price));
-  }
-
-  const totalCartItems = Object.values(cartQuantities).reduce((a, b) => a + b, 0);
-
-  const sortLabels = {
-    default: "Sort: Featured",
-    lowToHigh: "Price: Low to High",
-    highToLow: "Price: High to Low",
-  };
+  const totalCartCount = Object.values(cartQuantities).reduce((a, b) => a + b, 0);
 
   return (
-    <div className="bg-[#1a0f07] text-amber-50 min-h-screen overflow-x-hidden w-full">
-      <section className="relative py-8 md:py-10 border-b border-amber-600/30 bg-gradient-to-b from-[#120B07] via-[#1a0f07] to-amber-950/30 px-4">
-        <div className="max-w-6xl mx-auto text-center space-y-3">
-          <span className="inline-flex items-center gap-2 bg-amber-950/80 border border-amber-500/40 text-amber-300 px-3.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-md">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-            Crafted To Perfection
-          </span>
+    <div className="bg-[#1a0f07] text-amber-50 min-h-screen py-8 px-4 md:px-8 font-sans relative">
+      <div className="max-w-7xl mx-auto space-y-6">
 
-          <h1 className="text-2xl md:text-4xl font-black text-amber-50 leading-tight">
-            Savor The Exceptional <span className="text-amber-400">Coffee & Bites</span>
-          </h1>
-
-          <p className="text-amber-200/70 max-w-xl mx-auto text-xs font-light">
-            Indulge in artisanal single-origin brews, pizzas, burgers, and fresh delights.
-          </p>
-
-          <div className="max-w-md mx-auto relative pt-2">
-            <input
-              type="text"
-              placeholder="Search coffee, pizza, burger, pastries..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-amber-950/80 border border-amber-600/30 focus:border-amber-400 text-amber-50 px-4 py-2.5 rounded-xl text-xs outline-none transition placeholder:text-amber-200/40"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-amber-300 hover:text-white text-xs font-bold"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-        </div>
-      </section>
-
-      <section className="py-6 px-4 md:px-8 max-w-6xl mx-auto space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-amber-600/30 gap-4">
+        {/* Top Header */}
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b-2 border-amber-600/40 pb-5">
           <div>
-            <p className="text-amber-400 text-xs font-bold uppercase tracking-widest">Barista & Kitchen Specials</p>
-            <h2 className="text-xl md:text-2xl font-black text-amber-50 mt-0.5">Our Full Menu</h2>
+            <span className="text-amber-400 text-xs font-black uppercase tracking-widest block">
+              ☕ Crafted With Passion
+            </span>
+            <h1 className="text-3xl md:text-5xl font-black mt-1 text-amber-50 tracking-tight">
+              Our Fresh Catalog
+            </h1>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center bg-amber-950/80 border border-amber-600/30 rounded-xl p-1 text-xs gap-1">
-              <button
-                onClick={() => setFoodType("all")}
-                className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
-                  foodType === "all" ? "bg-amber-600 text-white" : "text-amber-200/70 hover:text-white"
-                }`}
-              >
-                All
-              </button>
-
-              <button
-                onClick={() => setFoodType("veg")}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
-                  foodType === "veg" ? "bg-amber-600 text-white" : "text-amber-200/70 hover:text-white"
-                }`}
-              >
-                <span className="w-2.5 h-2.5 border border-green-500 flex items-center justify-center p-0.5 rounded-sm">
-                  <span className="w-1 h-1 bg-green-500 rounded-full"></span>
-                </span>
-                Veg
-              </button>
-
-              <button
-                onClick={() => setFoodType("nonveg")}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
-                  foodType === "nonveg" ? "bg-amber-600 text-white" : "text-amber-200/70 hover:text-white"
-                }`}
-              >
-                <span className="w-2.5 h-2.5 border border-red-500 flex items-center justify-center p-0.5 rounded-sm">
-                  <span className="w-1 h-1 bg-red-500 rounded-full"></span>
-                </span>
-                Non-Veg
-              </button>
-            </div>
-
-            <div className="relative">
-              <button
-                onClick={() => setIsSortOpen(!isSortOpen)}
-                className="bg-amber-950/90 border border-amber-600/40 text-amber-200 text-xs font-bold px-3 py-1.5 rounded-xl outline-none cursor-pointer flex items-center gap-1.5"
-              >
-                <span>{sortLabels[sortOrder]}</span>
-                <span className="text-[10px] text-amber-400">▼</span>
-              </button>
-
-              {isSortOpen && (
-                <div className="absolute right-0 mt-2 w-44 bg-[#180E0A] border border-amber-600/40 rounded-xl shadow-2xl py-1 z-50">
-                  <button
-                    onClick={() => { setSortOrder("default"); setIsSortOpen(false); }}
-                    className={`w-full text-left px-3 py-1.5 text-xs font-bold transition ${
-                      sortOrder === "default" ? "text-amber-400 bg-amber-950/60" : "text-amber-200/80 hover:bg-amber-950/40"
-                    }`}
-                  >
-                    Sort: Featured
-                  </button>
-                  <button
-                    onClick={() => { setSortOrder("lowToHigh"); setIsSortOpen(false); }}
-                    className={`w-full text-left px-3 py-1.5 text-xs font-bold transition ${
-                      sortOrder === "lowToHigh" ? "text-amber-400 bg-amber-950/60" : "text-amber-200/80 hover:bg-amber-950/40"
-                    }`}
-                  >
-                    Price: Low to High
-                  </button>
-                  <button
-                    onClick={() => { setSortOrder("highToLow"); setIsSortOpen(false); }}
-                    className={`w-full text-left px-3 py-1.5 text-xs font-bold transition ${
-                      sortOrder === "highToLow" ? "text-amber-400 bg-amber-950/60" : "text-amber-200/80 hover:bg-amber-950/40"
-                    }`}
-                  >
-                    Price: High to Low
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {totalCartItems > 0 && (
-              <button
-                onClick={() => navigate("/cart")}
-                className="flex items-center gap-1.5 bg-gradient-to-r from-amber-600 to-amber-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-md"
-              >
-                <span>Cart</span>
-                <span className="bg-amber-950 text-amber-300 px-2 py-0.5 rounded-full text-[10px] font-black">
-                  {totalCartItems}
-                </span>
-              </button>
+          <button
+            onClick={() => navigate("/cart")}
+            className="bg-amber-600 hover:bg-amber-500 text-white px-5 py-3 rounded-2xl font-black text-xs md:text-sm transition flex items-center gap-3 shadow-xl shadow-amber-600/30 cursor-pointer"
+          >
+            <span>🛒 Go to Cart</span>
+            {totalCartCount > 0 && (
+              <span className="bg-amber-950 border border-amber-400 text-amber-300 px-2.5 py-0.5 rounded-full text-xs font-black">
+                {totalCartCount}
+              </span>
             )}
-          </div>
+          </button>
         </div>
 
-        {categories.length > 1 && (
-          <div className="flex items-center gap-2 overflow-x-auto pb-2">
-            {categories.map((cat) => (
+        {/* Filters and Search Bar */}
+        <div className="bg-gradient-to-b from-amber-950/80 to-amber-900/40 border-2 border-amber-600/40 p-4 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl">
+          <input
+            type="text"
+            placeholder="🔍 Search cappuccino, croissant, pizza..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full md:w-80 bg-amber-950/90 border-2 border-amber-600/40 text-amber-50 px-4 py-3 rounded-2xl text-xs font-bold outline-none focus:border-amber-400 placeholder:text-amber-200/40"
+          />
+
+          <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
+            {["All", "Coffee", "Tea", "Pizza", "Burger", "Snack", "Ice-Cream", "Dessert"].map((cat) => (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-3.5 py-1 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
-                  selectedCategory === cat
-                    ? "bg-amber-600 text-white shadow-md"
-                    : "bg-amber-950/60 text-amber-200/70 border border-amber-600/30 hover:text-white"
+                className={`px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap cursor-pointer transition ${
+                  selectedCategory === cat ? "bg-amber-600 text-white shadow-lg shadow-amber-600/40" : "bg-amber-950 text-amber-200/70 hover:text-white"
                 }`}
               >
                 {cat}
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Loading Banner when sync is happening */}
+        {loading && (
+          <div className="bg-amber-950/90 border-2 border-amber-500/50 p-4 rounded-2xl flex items-center justify-between animate-pulse">
+            <span className="text-xs font-black text-amber-300 flex items-center gap-2">
+              <span className="animate-spin text-base">☕</span> Syncing latest live prices with Coffee House Server...
+            </span>
+            <span className="text-[10px] font-mono text-amber-200/60">Instant Local View</span>
+          </div>
         )}
 
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((idx) => (
-              <div key={idx} className="bg-amber-950/40 border border-amber-600/20 rounded-2xl h-56 animate-pulse" />
-            ))}
-          </div>
-        ) : filteredMenus.length === 0 ? (
-          <div className="text-center py-12 text-amber-200/50 text-xs font-semibold">
-            No menu items found.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {filteredMenus.map((menu) => {
-              const itemId = menu.id || menu._id;
-              const qty = cartQuantities[itemId] || 0;
-              const categoryName = typeof menu.category === "object" ? menu.category?.name : menu.category;
-              const itemName = menu.name || menu.title;
-              const isNonVeg =
-                menu.is_veg === false ||
-                menu.type === "nonveg" ||
-                (menu.category && String(menu.category).toLowerCase().includes("non"));
-              const mediaUrl = formatImageUrl(menu.image || menu.item_image);
-              const isVid = isVideoUrl(mediaUrl);
-
-              return (
-                <div
-                  key={itemId}
-                  className="group bg-gradient-to-b from-amber-950/60 to-amber-900/30 border border-amber-600/30 hover:border-amber-400/60 rounded-2xl overflow-hidden flex flex-col justify-between transition duration-300 shadow-md"
-                >
-                  <div>
-                    <div className="relative h-36 w-full overflow-hidden bg-[#180E0A] shrink-0">
-                      {isVid ? (
-                        <video
-                          src={mediaUrl}
-                          autoPlay
-                          loop
-                          muted
-                          playsInline
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <img
-                          src={mediaUrl}
-                          alt={itemName}
-                          loading="eager"
-                          decoding="async"
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      )}
-
-                      {isNonVeg && (
-                        <span className="absolute top-2 left-2 bg-red-950/90 text-red-300 border border-red-500/50 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase flex items-center gap-1 z-10">
-                          <span className="w-2 h-2 border border-red-500 flex items-center justify-center p-0.5 rounded-sm">
-                            <span className="w-1 h-1 bg-red-500 rounded-full"></span>
-                          </span>
-                          Non-Veg
-                        </span>
-                      )}
-
-                      {categoryName && !isNonVeg && (
-                        <span className="absolute top-2 left-2 bg-amber-950/90 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase z-10">
-                          {categoryName}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="p-3">
-                      <h3 className="text-xs font-bold text-amber-50 truncate">
-                        {itemName}
-                      </h3>
-                      <p className="text-amber-200/60 text-[11px] mt-1 line-clamp-2 leading-tight font-light h-7">
-                        {menu.description || "Freshly prepared specialty item."}
-                      </p>
-                    </div>
+        {/* Menu Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredMenus.map((item) => {
+            const qty = cartQuantities[item.id] || 0;
+            return (
+              <div
+                key={item.id}
+                className="bg-gradient-to-b from-amber-950/80 to-amber-900/40 border-2 border-amber-600/40 hover:border-amber-400/80 rounded-3xl overflow-hidden shadow-2xl flex flex-col justify-between transition-all duration-300"
+              >
+                <div>
+                  <div className="h-56 bg-[#0d0704] relative overflow-hidden flex items-center justify-center border-b-2 border-amber-600/30">
+                    <img
+                      src={formatImageUrl(item.image)}
+                      alt={item.name}
+                      className="w-full h-full object-cover object-center"
+                    />
+                    <span className="absolute top-3 left-3 bg-amber-950/90 backdrop-blur-md text-amber-300 border border-amber-500/40 text-[10px] px-3 py-1 rounded-full font-black uppercase tracking-wider z-10 shadow-md">
+                      {item.category}
+                    </span>
                   </div>
 
-                  <div className="p-3 pt-0">
-                    <div className="flex items-center justify-between pt-2 border-t border-amber-600/20">
-                      <div>
-                        <p className="text-sm font-black text-amber-400">₹{menu.price}</p>
-                      </div>
-
-                      <div>
-                        {qty > 0 ? (
-                          <div className="flex items-center bg-amber-950 border border-amber-500/40 rounded-lg overflow-hidden">
-                            <button
-                              type="button"
-                              onClick={(e) => handleDecrease(e, itemId)}
-                              className="px-2 py-0.5 text-amber-300 hover:bg-amber-600 hover:text-white font-black text-xs transition select-none"
-                            >
-                              −
-                            </button>
-                            <span className="px-2 text-amber-50 font-bold text-xs select-none">
-                              {qty}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={(e) => handleIncrease(e, itemId)}
-                              className="px-2 py-0.5 text-amber-300 hover:bg-amber-600 hover:text-white font-black text-xs transition select-none"
-                            >
-                              +
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={(e) => handleAddToCart(e, itemId)}
-                            className="px-3 py-1 rounded-lg text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white transition shadow-sm cursor-pointer"
-                          >
-                            Add
-                          </button>
-                        )}
-                      </div>
+                  <div className="p-5 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="text-lg font-black text-amber-50 leading-tight">
+                        {item.name}
+                      </h3>
+                      <span className="text-xl font-black text-amber-400 shrink-0">₹{item.price}</span>
                     </div>
+                    <p className="text-amber-200/70 text-xs line-clamp-3 leading-relaxed font-semibold">
+                      {item.description || "Freshly prepared specialty dish crafted with organic ingredients."}
+                    </p>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
+
+                <div className="p-4 border-t-2 border-amber-600/30 flex items-center justify-between bg-amber-950/80 mt-2">
+                  <span className="text-xs font-black text-amber-300">
+                    {qty > 0 ? `In Cart: ${qty}` : "Fresh Preparation"}
+                  </span>
+
+                  {qty === 0 ? (
+                    <button
+                      onClick={() => updateQuantity(item.id, 1)}
+                      className="bg-amber-600 hover:bg-amber-500 text-white px-5 py-2.5 rounded-xl font-black text-xs transition cursor-pointer shadow-lg shadow-amber-600/40"
+                    >
+                      + Add Item
+                    </button>
+                  ) : (
+                    <div className="flex items-center bg-[#120B07] border border-amber-500/50 rounded-xl overflow-hidden p-0.5">
+                      <button
+                        onClick={() => updateQuantity(item.id, -1)}
+                        className="w-8 h-8 bg-amber-950 hover:bg-amber-600 text-amber-300 hover:text-white font-black text-lg rounded-lg flex items-center justify-center cursor-pointer transition"
+                      >
+                        −
+                      </button>
+                      <span className="w-8 text-center font-black text-xs text-amber-50">{qty}</span>
+                      <button
+                        onClick={() => updateQuantity(item.id, 1)}
+                        className="w-8 h-8 bg-amber-950 hover:bg-amber-600 text-amber-300 hover:text-white font-black text-lg rounded-lg flex items-center justify-center cursor-pointer transition"
+                      >
+                        +
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+      </div>
     </div>
   );
 };
